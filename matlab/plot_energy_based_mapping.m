@@ -1,4 +1,5 @@
-% Assumptions: inextensible, planar segment
+%% Configuration
+% Assumptions: planar segment
 
 L_0 = 110*10^(-3); % inextended length of segment [m]
 d = 21*10^(-3); % radius of segment used for parametrization q [m]
@@ -10,6 +11,7 @@ eta_rib = 0.6;  % chamber volume efficiency (reduced by rib-like structure) [-]
 p_atm = 1*10^5; % atmospheric pressure [Pa]
 Delta_max = 45/180*pi*d; % maximum bending angle we plot [m]
 
+%% Symbolic derivation
 % symbolic volume function
 syms V_C_L(Delta, delta_L) V_C_R(Delta, delta_L);
 
@@ -29,6 +31,9 @@ G_P_q_L(Delta, delta_L, p) = dV_dDelta_L*p_atm ...
                            + dV_dDelta_L*p*(log(V_C_L(0,0)/V_C_L(Delta, delta_L))-1);
 G_P_q_R(Delta, delta_L, p) = dV_dDelta_R*p_atm ...
                            + dV_dDelta_R*p*(log(V_C_R(0,0)/V_C_R(Delta, delta_L))-1);
+
+%% Plotting
+% Assumption: inextensible
 
 f = figure('Name', 'Energy-based approach');
 grid on
@@ -52,4 +57,8 @@ for p=0:0.5*10^5:4*10^5
 end
 legend(FontSize=11)
 hold off;
+
+%% Singularity investigation
+Delta_star_L = 2*(1-exp(-1))*(R_C_out-R_C_in)/(R_C_out^2-R_C_in^2)*L_0*d
+theta_star_L = Delta_star_L / d / pi * 180
 
