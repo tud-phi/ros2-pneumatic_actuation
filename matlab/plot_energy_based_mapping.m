@@ -1,14 +1,14 @@
 % Assumptions: inextensible, planar segment
 
-L_0 = 110*10^(-3);
-d = 21*10^(-3);
-R_C_in = 7.14*10^(-3);
-R_C_out = 20.19*10^(-3);
-b_C = 0.0087;
-eta_rib = 0.6;
+L_0 = 110*10^(-3); % inextended length of segment [m]
+d = 21*10^(-3); % radius of segment used for parametrization q [m]
+R_C_in = 7.14*10^(-3); % inner chamber wall radius [m]
+R_C_out = 20.19*10^(-3); % outer chamber wall radius [m]
+b_C = 8.7*10^(-3); % modelled planar depth [m]
+eta_rib = 0.6;  % chamber volume efficiency (reduced by rib-like structure) [-]
 
-p_atm = 1*10^5;
-Delta_max = 45/180*pi*d;
+p_atm = 1*10^5; % atmospheric pressure [Pa]
+Delta_max = 45/180*pi*d; % maximum bending angle we plot [m]
 
 % symbolic volume function
 syms V_C_L(Delta, delta_L) V_C_R(Delta, delta_L);
