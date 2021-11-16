@@ -1,0 +1,11 @@
+% Assumptions: inextensible, planar segment
+
+
+b_C = 1;
+eta_rib = 0.6;
+R_C_in = 0.1;
+R_C_out = 1;
+d = 1;
+
+% symbolic volume function
+syms V_C(Delta_i) = 
