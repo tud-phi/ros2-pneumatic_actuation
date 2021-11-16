@@ -35,7 +35,7 @@ G_P_q_R(Delta, delta_L, p) = dV_dDelta_R*p_atm ...
 %% Plotting
 % Assumption: inextensible
 
-f = figure('Name', 'Energy-based approach');
+f = figure('Name', 'Energy-based approach left chamber');
 grid on
 box on
 set(gcf,'color','w');
@@ -43,15 +43,36 @@ figureWidth = 720; %
 figureHeight = 480; %
 f.Position(3:4) = [figureWidth figureHeight];
 hold on
-
 syms G_P_q_L_const_p(Delta)
 for p=0:0.5*10^5:4*10^5
     G_P_q_L_const_p(Delta) = G_P_q_L(Delta, 0, p);
 
     plot_name = 'p='+string(p*10^(-5))+' [bar]';
     fplot(G_P_q_L_const_p(Delta), [-Delta_max Delta_max], DisplayName=plot_name, LineWidth=1.5)
-    xlabel("$\Delta_i$ [m]", Interpreter="latex")
-    ylabel("$G_{\mathrm{P},\mathrm{L}}^q$ [N]", Interpreter="latex")
+    xlabel("$\Delta_i$ [m]", Interpreter="latex", FontSize=13)
+    ylabel("$G_{\mathrm{P},\mathrm{L}}^q$ [N]", Interpreter="latex", FontSize=13)
+    
+    hold on;
+end
+legend(FontSize=11)
+hold off;
+
+f = figure('Name', 'Energy-based approach right chamber');
+grid on
+box on
+set(gcf,'color','w');
+figureWidth = 720; % 
+figureHeight = 480; %
+f.Position(3:4) = [figureWidth figureHeight];
+hold on
+syms G_P_q_R_const_p(Delta)
+for p=0:0.5*10^5:4*10^5
+    G_P_q_R_const_p(Delta) = G_P_q_R(Delta, 0, p);
+
+    plot_name = 'p='+string(p*10^(-5))+' [bar]';
+    fplot(G_P_q_R_const_p(Delta), [-Delta_max Delta_max], DisplayName=plot_name, LineWidth=1.5)
+    xlabel("$\Delta_i$ [m]", Interpreter="latex", FontSize=13)
+    ylabel("$G_{\mathrm{P},\mathrm{R}}^q$ [N]", Interpreter="latex", FontSize=13)
     
     hold on;
 end
