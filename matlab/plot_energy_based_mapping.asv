@@ -1,11 +1,42 @@
 % Assumptions: inextensible, planar segment
 
-
-b_C = 1;
+L_0 = 110*10^(-3);
+d = 21*10^(-3);
+R_C_in = 7.14*10^(-3);
+R_C_out = 20.19*10^(-3);
+b_C = 0.0087;
 eta_rib = 0.6;
-R_C_in = 0.1;
-R_C_out = 1;
-d = 1;
+
+p_atm = 1*10^5;
 
 % symbolic volume function
-syms V_C(Delta_i) = 
+syms V_C_L(Delta, delta_L) V_C_R(Delta, delta_L);
+
+V_C_L(Delta, delta_L) = eta_rib*(R_C_out-R_C_in)*(L_0 + delta_L) ...
+                      - eta_rib*(R_C_out^2 - R_C_in^2)/2*Delta/d;
+V_C_R(Delta, delta_L) = eta_rib*(R_C_out-R_C_in)*(L_0 + delta_L) ...
+                      + eta_rib*(R_C_out^2 - R_C_in^2)/2*Delta/d;
+
+% gradient of volume with respect to configuration
+dV_dDelta_L = - eta_rib * (R_C_out^2 - R_C_in^2) / (2 * d);
+dV_dDelta_R = + eta_rib * (R_C_out^2 - R_C_in^2) / (2 * d);
+dV_ddeltaL = eta_rib * (R_C_out - R_C_in);
+
+% symbolic conservative torque function
+syms G_P_q_L(Delta, delta_L, p) G_P_q_L(Delta, delta_L, p);
+G_P_q_L(Delta, delta_L, p) = dV_dDelta_L*p_atm ...
+                           + dV_dDelta_L*p*(log(V_C_L(0,0)/V_C_L(Delta, delta_L))-1);
+G_P_q_R(Delta, delta_L, p) = dV_dDelta_R*p_atm ...
+                           + dV_dDelta_R*p*(log(V_C_R(0,0)/V_C_R(Delta, delta_L))-1);
+
+Delta_max = 45/180*pi*d;
+
+syms G_P_q_L_const_p(Delta)
+for p=0:10^5:4*10^5
+    G_P_q_L_const_p(Delta) = G_P_q_L(Delta, 0, p);
+
+    fplot(G_P_q_L_const_p(Delta), [-Delta_max Delta_max])
+    ylabel("", Interpreter="latex")
+    break
+end
+
