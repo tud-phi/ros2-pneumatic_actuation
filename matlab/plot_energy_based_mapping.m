@@ -11,6 +11,10 @@ eta_rib = 0.6;  % chamber volume efficiency (reduced by rib-like structure) [-]
 p_atm = 1*10^5; % atmospheric pressure [Pa]
 Delta_max = 45/180*pi*d; % maximum bending angle we plot [m]
 
+% plotting 
+figureWidth = 720; % 
+figureHeight = 480; %
+
 %% Symbolic derivation
 % symbolic volume function
 syms V_C_L(Delta, delta_L) V_C_R(Delta, delta_L);
@@ -32,15 +36,31 @@ G_P_q_L(Delta, delta_L, p) = dV_dDelta_L*p_atm ...
 G_P_q_R(Delta, delta_L, p) = dV_dDelta_R*p_atm ...
                            + dV_dDelta_R*p*(log(V_C_R(0,0)/V_C_R(Delta, delta_L))-1);
 
-%% Plotting
+%% Plotting of chamber volume
+f = figure('Name', 'Chamber volume');
+grid on
+box on
+set(gcf,'color','w');
+f.Position(3:4) = [figureWidth figureHeight];
+syms V_C_L_const_delta_L(Delta) V_C_R_const_delta_L(Delta)
+V_C_L_const_delta_L(Delta) = V_C_L(Delta, 0);
+V_C_R_const_delta_L(Delta) = V_C_R(Delta, 0);
+fplot(V_C_L_const_delta_L(Delta), [-Delta_max Delta_max], DisplayName="V_{C,L}", LineWidth=1.5)
+hold on;
+fplot(V_C_R_const_delta_L(Delta), [-Delta_max Delta_max], DisplayName="V_{C,R}", LineWidth=1.5)
+hold on;
+xlabel("$\Delta_i$ [m]", Interpreter="latex", FontSize=13)
+ylabel("$V_{\mathrm{C}} [m^3]$", Interpreter="latex", FontSize=13)
+legend(FontSize=11)
+hold off;
+
+%% Plotting of conservative force
 % Assumption: inextensible
 
 f = figure('Name', 'Energy-based approach left chamber');
 grid on
 box on
 set(gcf,'color','w');
-figureWidth = 720; % 
-figureHeight = 480; %
 f.Position(3:4) = [figureWidth figureHeight];
 hold on
 syms G_P_q_L_const_p(Delta)
@@ -61,8 +81,6 @@ f = figure('Name', 'Energy-based approach right chamber');
 grid on
 box on
 set(gcf,'color','w');
-figureWidth = 720; % 
-figureHeight = 480; %
 f.Position(3:4) = [figureWidth figureHeight];
 hold on
 syms G_P_q_R_const_p(Delta)
