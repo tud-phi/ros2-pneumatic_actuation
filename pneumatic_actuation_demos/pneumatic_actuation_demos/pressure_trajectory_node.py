@@ -60,7 +60,7 @@ class PressureTrajectoryNode(Node):
         self.declare_parameter('deflate_time', 5)
         self.deflate_time = self.get_parameter('deflate_time').value
 
-        self.declare_parameter('segment_trajectories', [SegmentTrajectoryType.CIRCLE])
+        self.declare_parameter('segment_trajectories', [SegmentTrajectoryType.BENDING_1D_X])
         self.segment_trajectories = self.get_parameter('segment_trajectories').value
         assert len(self.segment_trajectories) == self.num_segments
 
@@ -102,16 +102,19 @@ class PressureTrajectoryNode(Node):
             self.commanded_forces = np.zeros(shape=(self.num_segments, 2))
             for segment_idx in range(self.num_segments):
                 trajectory_type = self.segment_trajectories[segment_idx]
+                num_completed_periods = self.state_counter * self.timer_period // self.trajectory_periods[segment_idx]
+                trajectory_time = self.state_counter * self.timer_period - num_completed_periods*self.trajectory_periods[segment_idx]
+
                 if trajectory_type == SegmentTrajectoryType.BENDING_1D_X:
-                    self.commanded_forces[segment_idx] = self.bending_1d_x_trajectory(self.state_counter, self.trajectory_periods[segment_idx], self.force_peaks[segment_idx])
+                    self.commanded_forces[segment_idx] = self.bending_1d_x_trajectory(trajectory_time, self.trajectory_periods[segment_idx], self.force_peaks[segment_idx])
                 elif trajectory_type == SegmentTrajectoryType.BENDING_1D_Y:
-                    self.commanded_forces[segment_idx] = self.bending_1d_y_trajectory(self.state_counter, self.trajectory_periods[segment_idx], self.force_peaks[segment_idx])
+                    self.commanded_forces[segment_idx] = self.bending_1d_y_trajectory(trajectory_time, self.trajectory_periods[segment_idx], self.force_peaks[segment_idx])
                 elif trajectory_type == SegmentTrajectoryType.CIRCLE:
-                    self.commanded_forces[segment_idx] = self.circle_trajectory(self.state_counter, self.trajectory_periods[segment_idx], self.force_peaks[segment_idx])
+                    self.commanded_forces[segment_idx] = self.circle_trajectory(trajectory_time, self.trajectory_periods[segment_idx], self.force_peaks[segment_idx])
                 elif trajectory_type == SegmentTrajectoryType.HALF_8_SHAPE:
-                    self.commanded_forces[segment_idx] = self.half_8_shape_trajectory(self.state_counter, self.trajectory_periods[segment_idx], self.force_peaks[segment_idx])
+                    self.commanded_forces[segment_idx] = self.half_8_shape_trajectory(trajectory_time, self.trajectory_periods[segment_idx], self.force_peaks[segment_idx])
                 elif trajectory_type == SegmentTrajectoryType.FULL_8_SHAPE:
-                    self.commanded_forces[segment_idx] = self.full_8_shape_trajectory(self.state_counter, self.trajectory_periods[segment_idx], self.force_peaks[segment_idx])
+                    self.commanded_forces[segment_idx] = self.full_8_shape_trajectory(trajectory_time, self.trajectory_periods[segment_idx], self.force_peaks[segment_idx])
                 else:
                     raise NotImplementedError
 
@@ -141,11 +144,29 @@ class PressureTrajectoryNode(Node):
         # self.get_logger().info(f'Publishing msg {self.counter}: {self.msg.data}')
         self.counter += 1
 
-    def circle_trajectory(self, idx, trajectory_period, force_peak) -> np.array:
-        t = idx * self.timer_period
+    def bending_1d_x_trajectory(self, trajectory_time, trajectory_period, force_peak) -> np.array:
+        if trajectory_time < 0.5*trajectory_period:
+            f_x = force_peak * trajectory_time / (0.5*trajectory_period)
+        else:
+            f_x = force_peak * (2-trajectory_time / (0.5*trajectory_period))
 
-        f_x = force_peak * np.cos(2*np.pi*t/trajectory_period)
-        f_y = force_peak * np.sin(2*np.pi*t/trajectory_period)
+        f_y = 0
+
+        return np.array([f_x, f_y])
+
+    def bending_1d_y_trajectory(self, trajectory_time, trajectory_period, force_peak) -> np.array:
+        f_x = 0
+
+        if trajectory_time < 0.5*trajectory_period:
+            f_y = force_peak * trajectory_time / (0.5*trajectory_period)
+        else:
+            f_y = force_peak * (2-trajectory_time / (0.5*trajectory_period))
+
+        return np.array([f_x, f_y])
+
+    def circle_trajectory(self, trajectory_time, trajectory_period, force_peak) -> np.array:
+        f_x = force_peak * np.cos(2*np.pi*trajectory_time/trajectory_period)
+        f_y = force_peak * np.sin(2*np.pi*trajectory_time/trajectory_period)
 
         return np.array([f_x, f_y])
 
