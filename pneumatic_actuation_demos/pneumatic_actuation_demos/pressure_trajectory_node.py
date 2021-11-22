@@ -15,6 +15,16 @@ class ExperimentState(IntEnum):
     RUNNING = 1
     DEFLATE = 2
 
+class SegmentTrajectoryType(IntEnum):
+    """
+    Enum class for the trajectory type of an individual segment.
+    """
+    BENDING_1D_X = 0
+    BENDING_1D_Y = 0
+    CIRCLE = 10
+    HALF_8_SHAPE = 20
+    FULL_8_SHAPE = 21
+
 
 class PressureTrajectoryNode(Node):
 
@@ -23,7 +33,7 @@ class PressureTrajectoryNode(Node):
 
         self.declare_parameter('num_segments', 1)
         self.num_segments = self.get_parameter('num_segments').value
-        self.declare_parameter('num_chambers', 3) # air chambers per segment
+        self.declare_parameter('num_chambers', 4) # air chambers per segment
         self.num_chambers = self.get_parameter('num_chambers').value
 
         self.declare_parameter('input_pressures_topic', '/vtem_control/input_pressures')
@@ -45,10 +55,27 @@ class PressureTrajectoryNode(Node):
 
         self.declare_parameter('inflate_time', 5)
         self.inflate_time = self.get_parameter('inflate_time').value
+        self.declare_parameter('experiment_duration', 60)
+        self.experiment_duration = self.get_parameter('experiment_duration').value
         self.declare_parameter('deflate_time', 5)
         self.deflate_time = self.get_parameter('deflate_time').value
 
-        self.timer_period = 0.1  # seconds
+        self.declare_parameter('segment_trajectories', [SegmentTrajectoryType.CIRCLE])
+        self.segment_trajectories = self.get_parameter('segment_trajectories').value
+        assert len(self.segment_trajectories) == self.num_segments
+
+        self.declare_parameter('trajectory_frequencies', [0.1])
+        self.trajectory_frequencies = self.get_parameter('trajectory_frequencies').value
+        assert len(self.trajectory_frequencies) == self.num_segments
+        self.trajectory_periods = [1/x for x in self.trajectory_frequencies]
+
+        self.declare_parameter('force_peaks', [1500]) # [N]
+        self.force_peaks = self.get_parameter('force_peaks').value # [N]
+        assert len(self.force_peaks) == self.num_segments
+
+        self.declare_parameter('node_frequency', 10)
+        self.node_frequency = self.get_parameter('node_frequency').value # [Hz]
+        self.timer_period = 1 / self.node_frequency  # seconds
         self.timer = self.create_timer(self.timer_period, self.timer_callback)
 
         self.counter = 0
@@ -59,7 +86,7 @@ class PressureTrajectoryNode(Node):
         self.commanded_pressures = np.zeros(shape=(self.num_segments, self.num_chambers))
         # self.commanded_pressures_history = []
 
-        self.msg: FluidPressures = self.prepare_fluid_pressures_msg()
+        self.msg: FluidPressures = self.prep_fluid_pressures_msg()
 
     def timer_callback(self):
         if self.state == ExperimentState.INFLATE:
@@ -71,9 +98,26 @@ class PressureTrajectoryNode(Node):
             else:
                 self.state_counter += 1
         elif self.state == ExperimentState.RUNNING:
-            self.commanded_pressures = self.torques_to_pressures(100*np.ones(shape=(self.num_segments, 2)))
+            
+            self.commanded_forces = np.zeros(shape=(self.num_segments, 2))
+            for segment_idx in range(self.num_segments):
+                trajectory_type = self.segment_trajectories[segment_idx]
+                if trajectory_type == SegmentTrajectoryType.BENDING_1D_X:
+                    self.commanded_forces[segment_idx] = self.bending_1d_x_trajectory(self.state_counter, self.trajectory_periods[segment_idx], self.force_peaks[segment_idx])
+                elif trajectory_type == SegmentTrajectoryType.BENDING_1D_Y:
+                    self.commanded_forces[segment_idx] = self.bending_1d_y_trajectory(self.state_counter, self.trajectory_periods[segment_idx], self.force_peaks[segment_idx])
+                elif trajectory_type == SegmentTrajectoryType.CIRCLE:
+                    self.commanded_forces[segment_idx] = self.circle_trajectory(self.state_counter, self.trajectory_periods[segment_idx], self.force_peaks[segment_idx])
+                elif trajectory_type == SegmentTrajectoryType.HALF_8_SHAPE:
+                    self.commanded_forces[segment_idx] = self.half_8_shape_trajectory(self.state_counter, self.trajectory_periods[segment_idx], self.force_peaks[segment_idx])
+                elif trajectory_type == SegmentTrajectoryType.FULL_8_SHAPE:
+                    self.commanded_forces[segment_idx] = self.full_8_shape_trajectory(self.state_counter, self.trajectory_periods[segment_idx], self.force_peaks[segment_idx])
+                else:
+                    raise NotImplementedError
 
-            if self.state_counter*self.timer_period >= 10:
+            self.commanded_pressures = self.forces_to_pressures(self.commanded_forces)
+
+            if self.state_counter*self.timer_period >= self.experiment_duration:
                 self.state = ExperimentState.DEFLATE
                 self.state_counter = 0
             else:
@@ -91,13 +135,21 @@ class PressureTrajectoryNode(Node):
 
         # self.commanded_pressures_history.append(self.commanded_pressures.copy())
 
-        self.msg = self.prepare_fluid_pressures_msg()
+        self.msg = self.prep_fluid_pressures_msg()
 
         self.publisher_.publish(self.msg)
         # self.get_logger().info(f'Publishing msg {self.counter}: {self.msg.data}')
         self.counter += 1
 
-    def torques_to_pressures(self, torques: np.array) -> np.array:
+    def circle_trajectory(self, idx, trajectory_period, force_peak) -> np.array:
+        t = idx * self.timer_period
+
+        f_x = force_peak * np.cos(2*np.pi*t/trajectory_period)
+        f_y = force_peak * np.sin(2*np.pi*t/trajectory_period)
+
+        return np.array([f_x, f_y])
+
+    def forces_to_pressures(self, torques: np.array) -> np.array:
         """
             Convert a torque at tip of segment to a pressure.
             Input: num_segments x 2 array of torques
@@ -125,7 +177,7 @@ class PressureTrajectoryNode(Node):
 
         return pressures
 
-    def prepare_fluid_pressures_msg(self) -> FluidPressures:
+    def prep_fluid_pressures_msg(self) -> FluidPressures:
         msg = FluidPressures()
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.data = []
