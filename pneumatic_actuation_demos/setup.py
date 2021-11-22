@@ -13,7 +13,7 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='root',
+    maintainer='Maximilian Stoelzle',
     maintainer_email='maximilian@stoelzle.ch',
     description='TODO: Package description',
     license='TODO: License declaration',
