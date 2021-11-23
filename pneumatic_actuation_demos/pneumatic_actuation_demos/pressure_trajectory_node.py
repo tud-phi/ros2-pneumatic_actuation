@@ -175,6 +175,24 @@ class PressureTrajectoryNode(Node):
 
         return np.array([f_x, f_y])
 
+    def half_8_shape_trajectory(self, trajectory_time, trajectory_period, force_peak) -> np.array:
+        # for description of trajectory: https://www.overleaf.com/read/dxvsqnksnqgt
+        F_x, F_y = 1, 0.5
+
+        f_x = force_peak * np.sin(2*np.pi*F_x*trajectory_time/trajectory_period)
+        f_y = force_peak * np.sin(2*np.pi*F_y*trajectory_time/trajectory_period)
+
+        return np.array([f_x, f_y])
+
+    def full_8_shape_trajectory(self, trajectory_time, trajectory_period, force_peak) -> np.array:
+        # for description of trajectory: https://www.overleaf.com/read/dxvsqnksnqgt
+        F_x, F_y = 2, 1
+
+        f_x = force_peak * np.sin(2*np.pi*F_x*trajectory_time/trajectory_period)
+        f_y = force_peak * np.sin(2*np.pi*F_y*trajectory_time/trajectory_period)
+
+        return np.array([f_x, f_y])
+
     def circle_trajectory(self, trajectory_time, trajectory_period, force_peak) -> np.array:
         f_x = force_peak * np.cos(2*np.pi*trajectory_time/trajectory_period)
         f_y = force_peak * np.sin(2*np.pi*trajectory_time/trajectory_period)
