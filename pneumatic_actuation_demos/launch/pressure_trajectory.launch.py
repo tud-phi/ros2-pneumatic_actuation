@@ -1,7 +1,7 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
-from pneumatic_actuation_demos.pneumatic_actuation_demos.pressure_trajectory_node import SegmentTrajectoryType
+from pneumatic_actuation_demos.pressure_trajectory_node import SegmentTrajectoryType
 
 def generate_launch_description():
     common_vtem_params = {"num_valves": 16, "modbus_node": "192.168.4.3", "modbus_service": "502"}

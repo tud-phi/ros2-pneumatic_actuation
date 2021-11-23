@@ -1,3 +1,5 @@
+import os
+from glob import glob
 from setuptools import setup
 
 package_name = 'pneumatic_actuation_demos'
@@ -10,16 +12,18 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='Maximilian Stoelzle',
     maintainer_email='maximilian@stoelzle.ch',
-    description='TODO: Package description',
-    license='TODO: License declaration',
+    description='Demos for pneumatic actuation of soft robotic arms.',
+    license='MIT',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'pressure_trajectory_node = pneumatic_actuation_demos.pressure_trajectory_node:main',
         ],
     },
 )
