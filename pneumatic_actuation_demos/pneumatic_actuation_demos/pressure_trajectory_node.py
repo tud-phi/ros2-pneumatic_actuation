@@ -5,6 +5,7 @@ from rclpy.node import Node
 
 from pneumatic_actuation_msgs.msg import FluidPressures
 from sensor_msgs.msg import FluidPressure
+from std_msgs.msg import Float64, Float64MultiArray, MultiArrayLayout, MultiArrayDimension
 
 
 class ExperimentState(IntEnum):
@@ -36,9 +37,15 @@ class PressureTrajectoryNode(Node):
         self.declare_parameter('num_chambers', 4) # air chambers per segment
         self.num_chambers = self.get_parameter('num_chambers').value
 
-        self.declare_parameter('input_pressures_topic', '/vtem_control/input_pressures')
-        vtem_input_pressures_topic = self.get_parameter('input_pressures_topic').get_parameter_value().string_value
-        self.publisher_ = self.create_publisher(FluidPressures, vtem_input_pressures_topic, 10)
+        # Publisher of commanded pressures as pneumatic_actuation_msgs.msg.FluidPressures
+        self.declare_parameter('commanded_pressures_topic', '/pneumatic_actuation/commanded_pressures')
+        commanded_pressures_topic = self.get_parameter('commanded_pressures_topic').get_parameter_value().string_value
+        self.publisher = self.create_publisher(FluidPressures, commanded_pressures_topic, 10)
+
+        # Publisher of commanded pressures as std_msgs.msg.Float64MultiArray
+        self.declare_parameter('commanded_pressures_array_topic', '/pneumatic_actuation/commanded_pressures_array')
+        commanded_pressures_array_topic = self.get_parameter('commanded_pressures_array_topic').get_parameter_value().string_value
+        self.publisher_array = self.create_publisher(Float64MultiArray, commanded_pressures_array_topic, 10)
 
         self.declare_parameter('pressure_offset', 150*100) # pressure in all chambers in straight configuration [Pa]
         self.pressure_offset = self.get_parameter('pressure_offset').value
@@ -84,7 +91,6 @@ class PressureTrajectoryNode(Node):
         self.state_counter = 0
 
         self.commanded_pressures = np.zeros(shape=(self.num_segments, self.num_chambers))
-        # self.commanded_pressures_history = []
 
         self.msg: FluidPressures = self.prep_fluid_pressures_msg()
 
@@ -136,11 +142,16 @@ class PressureTrajectoryNode(Node):
 
         self.get_logger().info(f'Commanding pressure at t={(self.counter*self.timer_period):.2f} with state {self.state.name}: {self.commanded_pressures.flatten()}')
 
-        # self.commanded_pressures_history.append(self.commanded_pressures.copy())
+        msg_multi_array = Float64MultiArray()
+        msg_multi_array.layout = MultiArrayLayout()
+        msg_multi_array.layout.dim = [MultiArrayDimension()]
+        msg_multi_array.layout.data_offset = 0
+        msg_multi_array.data = self.commanded_pressures.flatten().tolist()
+        self.publisher_array.publish(msg_multi_array)
 
         self.msg = self.prep_fluid_pressures_msg()
-
-        self.publisher_.publish(self.msg)
+        self.publisher.publish(self.msg)
+        
         # self.get_logger().info(f'Publishing msg {self.counter}: {self.msg.data}')
         self.counter += 1
 
