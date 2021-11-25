@@ -28,27 +28,27 @@ def generate_launch_description():
                     "num_segments": num_segments,
                     "pressure_offset": 125*100,
                     "radius_CoP": 0.1,
-                    "segment_trajectories": [SegmentTrajectoryType.FULL_8_SHAPE],
+                    "segment_trajectories": [SegmentTrajectoryType.CIRCLE],
                     "trajectory_frequencies": [0.1],
                 }
             ]
         ),
-        # Node(
-        #     package='vtem_control_cpp',
-        #     namespace='vtem_control',
-        #     executable='input_pressures_sub_node',
-        #     parameters=[
-        #         common_vtem_params,
-        #         {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 180*100.0}
-        #     ]
-        # ),
-        # Node(
-        #     package='vtem_control_cpp',
-        #     namespace='vtem_control',
-        #     executable='output_pressures_pub_node',
-        #     parameters=[
-        #         common_vtem_params,
-        #         {"output_pressures_topic": "output_pressures", "pub_freq": 50.}
-        #     ]
-        # ),
+        Node(
+            package='vtem_control_cpp',
+            namespace='vtem_control',
+            executable='input_pressures_sub_node',
+            parameters=[
+                common_vtem_params,
+                {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 200*100.0}
+            ]
+        ),
+        Node(
+            package='vtem_control_cpp',
+            namespace='vtem_control',
+            executable='output_pressures_pub_node',
+            parameters=[
+                common_vtem_params,
+                {"output_pressures_topic": "output_pressures", "pub_freq": 50.}
+            ]
+        ),
     ])
