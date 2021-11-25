@@ -5,16 +5,17 @@ from rclpy.node import Node
 
 from pneumatic_actuation_msgs.msg import FluidPressures
 from sensor_msgs.msg import FluidPressure
-from std_msgs.msg import Float64, Float64MultiArray, MultiArrayLayout, MultiArrayDimension
+from std_msgs.msg import Bool, Float64MultiArray, MultiArrayLayout, MultiArrayDimension
 
 
 class ExperimentState(IntEnum):
     """
     Enum class for the experiment state.
     """
-    INFLATE = 0
-    RUNNING = 1
-    DEFLATE = 2
+    BOOT_UP = 0
+    INFLATE = 1
+    RUNNING = 2
+    DEFLATE = 3
 
 class SegmentTrajectoryType(IntEnum):
     """
@@ -46,6 +47,12 @@ class PressureTrajectoryNode(Node):
         self.declare_parameter('commanded_pressures_array_topic', '/pneumatic_actuation/commanded_pressures_array')
         commanded_pressures_array_topic = self.get_parameter('commanded_pressures_array_topic').get_parameter_value().string_value
         self.publisher_array = self.create_publisher(Float64MultiArray, commanded_pressures_array_topic, 10)
+
+        # Subscriber to VTEM status messages
+        self.declare_parameter('vtem_status_topic', '/vtem_control/vtem_status')
+        vtem_status_topic = self.get_parameter('vtem_status_topic').get_parameter_value().string_value
+        self.sub_vtem_status = self.create_subscription(Bool, vtem_status_topic, self.vtem_status_callback, 10)
+        self.vtem_status = False
 
         self.declare_parameter('pressure_offset', 150*100) # pressure in all chambers in straight configuration [Pa]
         self.pressure_offset = self.get_parameter('pressure_offset').value
@@ -95,7 +102,13 @@ class PressureTrajectoryNode(Node):
         self.msg: FluidPressures = self.prep_fluid_pressures_msg()
 
     def timer_callback(self):
-        if self.state == ExperimentState.INFLATE:
+        if self.state == ExperimentState.BOOT_UP:
+            if self.vtem_status == True:
+                self.state = ExperimentState.INFLATE
+                self.state_counter = 0
+            else:
+                self.state_counter += 1
+        elif self.state == ExperimentState.INFLATE:
             self.commanded_pressures = (self.state_counter+1)*self.timer_period/self.inflate_time*np.ones_like(self.commanded_pressures)*self.pressure_offset
 
             if self.state_counter*self.timer_period >= self.inflate_time:
@@ -154,6 +167,9 @@ class PressureTrajectoryNode(Node):
         
         # self.get_logger().info(f'Publishing msg {self.counter}: {self.msg.data}')
         self.counter += 1
+
+    def vtem_status_callback(self, msg):
+        self.vtem_status = msg.data
 
     def bending_1d_x_trajectory(self, trajectory_time, trajectory_period, force_peak) -> np.array:
         if trajectory_time < 0.5*trajectory_period:
