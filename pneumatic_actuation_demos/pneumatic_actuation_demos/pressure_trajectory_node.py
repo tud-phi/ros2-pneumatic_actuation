@@ -76,9 +76,9 @@ class PressureTrajectoryNode(Node):
         assert len(self.trajectory_frequencies) == self.num_segments
         self.trajectory_periods = [1/x for x in self.trajectory_frequencies]
 
-        self.declare_parameter('force_peaks', [1500]) # [N]
-        self.force_peaks = self.get_parameter('force_peaks').value # [N]
-        assert len(self.force_peaks) == self.num_segments
+        self.declare_parameter('pressure_peaks', [1500]) # [N]
+        self.pressure_peaks = self.get_parameter('pressure_peaks').value # [N]
+        assert len(self.pressure_peaks) == self.num_segments
 
         self.declare_parameter('node_frequency', 10)
         self.node_frequency = self.get_parameter('node_frequency').value # [Hz]
@@ -110,17 +110,18 @@ class PressureTrajectoryNode(Node):
                 trajectory_type = self.segment_trajectories[segment_idx]
                 num_completed_periods = self.state_counter * self.timer_period // self.trajectory_periods[segment_idx]
                 trajectory_time = self.state_counter * self.timer_period - num_completed_periods*self.trajectory_periods[segment_idx]
+                force_peak = self.pressure_peaks[segment_idx] / np.max(self.A_p)
 
                 if trajectory_type == SegmentTrajectoryType.BENDING_1D_X:
-                    self.commanded_forces[segment_idx] = self.bending_1d_x_trajectory(trajectory_time, self.trajectory_periods[segment_idx], self.force_peaks[segment_idx])
+                    self.commanded_forces[segment_idx] = self.bending_1d_x_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.BENDING_1D_Y:
-                    self.commanded_forces[segment_idx] = self.bending_1d_y_trajectory(trajectory_time, self.trajectory_periods[segment_idx], self.force_peaks[segment_idx])
+                    self.commanded_forces[segment_idx] = self.bending_1d_y_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.CIRCLE:
-                    self.commanded_forces[segment_idx] = self.circle_trajectory(trajectory_time, self.trajectory_periods[segment_idx], self.force_peaks[segment_idx])
+                    self.commanded_forces[segment_idx] = self.circle_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.HALF_8_SHAPE:
-                    self.commanded_forces[segment_idx] = self.half_8_shape_trajectory(trajectory_time, self.trajectory_periods[segment_idx], self.force_peaks[segment_idx])
+                    self.commanded_forces[segment_idx] = self.half_8_shape_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.FULL_8_SHAPE:
-                    self.commanded_forces[segment_idx] = self.full_8_shape_trajectory(trajectory_time, self.trajectory_periods[segment_idx], self.force_peaks[segment_idx])
+                    self.commanded_forces[segment_idx] = self.full_8_shape_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 else:
                     raise NotImplementedError
 
