@@ -94,7 +94,7 @@ class PressureTrajectoryNode(Node):
 
         self.counter = 0
 
-        self.state = ExperimentState.INFLATE
+        self.state = ExperimentState.BOOT_UP
         self.state_counter = 0
 
         self.commanded_pressures = np.zeros(shape=(self.num_segments, self.num_chambers))
