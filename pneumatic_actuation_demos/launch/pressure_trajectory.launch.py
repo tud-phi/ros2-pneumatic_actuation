@@ -7,8 +7,10 @@ def generate_launch_description():
     num_segments = 1
     num_chambers = 4
 
-    common_vtem_params = {"num_valves": num_segments*num_chambers, "modbus_node": "192.168.4.3", "modbus_service": "502"}
     commanded_pressures_topic = "/pneumatic_actuation/commanded_pressures"
+    vtem_status_topic = "/vtem_control/vtem_status"
+
+    common_vtem_params = {"num_valves": num_segments*num_chambers, "modbus_node": "192.168.4.3", "modbus_service": "502"}
 
     return LaunchDescription([
         Node(
@@ -48,7 +50,7 @@ def generate_launch_description():
             executable='output_pressures_pub_node',
             parameters=[
                 common_vtem_params,
-                {"output_pressures_topic": "output_pressures", "pub_freq": 50.}
+                {"output_pressures_topic": "output_pressures", "pub_freq": 50., "vtem_status_topic": vtem_status_topic}
             ]
         ),
     ])
