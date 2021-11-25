@@ -146,7 +146,7 @@ class PressureTrajectoryNode(Node):
         msg_multi_array.layout = MultiArrayLayout()
         msg_multi_array.layout.dim = [MultiArrayDimension(label="segments"), MultiArrayDimension(label="chambers")]
         msg_multi_array.layout.data_offset = 0
-        msg_multi_array.data = self.commanded_pressures.tolist()
+        msg_multi_array.data = self.commanded_pressures.flatten().tolist()
         self.publisher_array.publish(msg_multi_array)
 
         self.msg = self.prep_fluid_pressures_msg()
