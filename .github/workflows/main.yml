@@ -17,7 +17,8 @@ jobs:
   ament_lint:
     runs-on: ubuntu-latest
     container:
-      image: ubuntu:bionic
+      image: rostooling/setup-ros-docker:ubuntu-bionic-ros-galactic-ros-base-latest
+      options: -u root  # setup-node requires root access
     strategy:
       fail-fast: false
       matrix:
@@ -28,4 +29,4 @@ jobs:
     - uses: ros-tooling/action-ros-lint@master
       with:
         linter: ${{ matrix.linter }}
-        package-name: your_package_name
+        package-name: pneumatic_actuation_demos
