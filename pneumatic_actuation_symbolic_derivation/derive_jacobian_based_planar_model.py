@@ -189,7 +189,7 @@ class JacobianBasedPlanarPneumaticActuationModel:
         # torque produced along the inner wall of the chamber
         dtau_in = (self.J.T @ (self.R @ sympy.Matrix([0, sign*(-1)])) * self.b_C * self.p).subs([(self.r, sign*self.R_C_in)])
         # torque produced along the outer wall of the chamber
-        dtau_out = (self.J.T @ (self.R @ sympy.Matrix([0, sign*1])) * self.b_C * self.p).subs([(self.r, self.R_C_out)])
+        dtau_out = (self.J.T @ (self.R @ sympy.Matrix([0, sign*1])) * self.b_C * self.p).subs([(self.r, sign*self.R_C_out)])
         # torque produced along the bottom of the chamber (e.g. at the base)
         J_B_limit = self.J.limit(self.s, 0) # we need to evaluate the limit of J[0] towards s=0, otherwise division by zero
         dtau_B = (J_B_limit.T @ (self.R @ sympy.Matrix([-1, 0])) * self.b_C * self.p).subs([(self.s, 0)])
