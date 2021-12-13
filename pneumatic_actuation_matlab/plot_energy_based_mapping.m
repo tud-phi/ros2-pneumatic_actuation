@@ -19,15 +19,15 @@ figureHeight = 480; %
 % symbolic volume function
 syms V_C_L(Delta, delta_L) V_C_R(Delta, delta_L);
 
-V_C_L(Delta, delta_L) = eta_rib*(R_C_out-R_C_in)*(L_0 + delta_L) ...
-                      - eta_rib*(R_C_out^2 - R_C_in^2)/2*Delta/d;
-V_C_R(Delta, delta_L) = eta_rib*(R_C_out-R_C_in)*(L_0 + delta_L) ...
-                      + eta_rib*(R_C_out^2 - R_C_in^2)/2*Delta/d;
+V_C_L(Delta, delta_L) = eta_rib*b_C*(R_C_out-R_C_in)*(L_0 + delta_L) ...
+                      - eta_rib*b_C*(R_C_out^2 - R_C_in^2)/2*Delta/d;
+V_C_R(Delta, delta_L) = eta_rib*b_C*(R_C_out-R_C_in)*(L_0 + delta_L) ...
+                      + eta_rib*b_C*(R_C_out^2 - R_C_in^2)/2*Delta/d;
 
 % gradient of volume with respect to configuration
-dV_dDelta_L = - eta_rib * (R_C_out^2 - R_C_in^2) / (2 * d);
-dV_dDelta_R = + eta_rib * (R_C_out^2 - R_C_in^2) / (2 * d);
-dV_ddeltaL = eta_rib * (R_C_out - R_C_in);
+dV_dDelta_L = - eta_rib * b_C * (R_C_out^2 - R_C_in^2) / (2 * d);
+dV_dDelta_R = + eta_rib * b_C * (R_C_out^2 - R_C_in^2) / (2 * d);
+dV_ddeltaL = eta_rib * b_C * (R_C_out - R_C_in);
 
 % symbolic conservative torque function
 syms G_P_q_L(Delta, delta_L, p) G_P_q_L(Delta, delta_L, p);
