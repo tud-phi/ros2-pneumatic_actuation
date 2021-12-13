@@ -198,8 +198,8 @@ class JacobianBasedPlanarPneumaticActuationModel:
 
         tau_in = sympy.integrate(dtau_in, (self.s, 0, 1))
         tau_out = sympy.integrate(dtau_out, (self.s, 0, 1))
-        tau_B = sympy.integrate(dtau_B, (self.r, sign*self.R_C_in, sign*self.R_C_out))
-        tau_T = sympy.integrate(dtau_T, (self.r, sign*self.R_C_in, sign*self.R_C_out))
+        tau_B = sympy.integrate(dtau_B, (self.r, min(sign*self.R_C_in, sign*self.R_C_out), max(sign*self.R_C_in, sign*self.R_C_out)))
+        tau_T = sympy.integrate(dtau_T, (self.r, min(sign*self.R_C_in, sign*self.R_C_out), max(sign*self.R_C_in, sign*self.R_C_out)))
         tau = tau_in + tau_out + tau_B + tau_T
 
         # assume relative pressure of 300 mBar
@@ -308,8 +308,8 @@ if __name__ == '__main__':
     b_C = 8.7*10**(-3)
 
     model = JacobianBasedPlanarPneumaticActuationModel(L_0, d, R_C_in, R_C_out, b_C)
-    model.perpendicular_force_at_tip()
-    model.force_at_center_of_pressure_at_tip()
-    model.pneumatic_tube()
+    # model.perpendicular_force_at_tip()
+    # model.force_at_center_of_pressure_at_tip()
+    # model.pneumatic_tube()
     model.pneumatic_chamber(side="left")
     model.pneumatic_chamber(side="right")
