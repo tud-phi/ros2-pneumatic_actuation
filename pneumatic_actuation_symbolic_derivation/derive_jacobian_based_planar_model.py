@@ -9,13 +9,17 @@ from sympy.solvers.diophantine.diophantine import ldescent
 This script derives the symbolic model of the pneumatic actuation system for a planar one segment robot.
 """
 
-class JacobianBasedPneumaticActuationModel:
-    def __init__(self, L_0_i: float = 1., d_i: float = 1., r_p: float = 1., b_C: float = 1.) -> None:
-        # Parameters
+class JacobianBasedPlanarPneumaticActuationModel:
+    def __init__(self, L_0_i: float = 1., d_i: float = 1., r_p: float = 1., b_C: float = 1., R_C_in: float = 0., R_C_out: float = 1.) -> None:
+        # Parameters from arguments
         self.L_0_i = L_0_i # Unextended length of the arm segment
         self.d_i = d_i # diameter of robot used for kinematic description
         self.r_p = r_p # radius of the center of pressure of the chamber
         self.b_C = b_C # modelled planar depth of the 2D segment
+        self.R_C_in = R_C_in # inner radius of the chamber
+        self.R_C_out = R_C_out # outer radius of the chamber
+
+        # Parameters
         self.f = 1 # Scalar force acting at the tip of the segment [N] perpendicular to center-line
 
         # Symbolic variables
@@ -132,7 +136,7 @@ class JacobianBasedPneumaticActuationModel:
         tau = tau_L + tau_R + tau_B + tau_T
 
         # assume pressure of 1 bar
-        tau = tau.subs(self.p, 10**5)
+        tau = tau.subs(self.p, 1)
 
         line1, line2, line3 = plot(tau[0].subs(self.delta_L_i, 1.0*self.L_0_i), 
                                    tau[0].subs(self.delta_L_i, 1.1*self.L_0_i), 
@@ -160,8 +164,62 @@ class JacobianBasedPneumaticActuationModel:
         plt.ylabel(r"$\tau_1$ [N]")
         plt.show()
 
+    def pneumatic_chamber(self, side="left"):
+        """
+        Computes and plots a pneumatic tube (e.g. one chamber radially expanding from the CC center-line)
+        :return:
+        """
+
+        assert side in ["left", "right"]
+        sign = 1 if side == "left" else -1
+
+        # torque produced along the inner wall of the chamber
+        dtau_in = (self.J.T @ (self.R @ sympy.Matrix([0, sign*(-1)])) * self.b_C * self.p).subs([(self.r, sign*self.R_C_in)])
+        # torque produced along the outer wall of the chamber
+        dtau_out = (self.J.T @ (self.R @ sympy.Matrix([0, sign*1])) * self.b_C * self.p).subs([(self.r, self.R_C_out)])
+        # torque produced along the bottom of the chamber (e.g. at the base)
+        J_B_limit = self.J.limit(self.s, 0) # we need to evaluate the limit of J[0] towards s=0, otherwise division by zero
+        dtau_B = (J_B_limit.T @ (self.R @ sympy.Matrix([-1, 0])) * self.b_C * self.p).subs([(self.s, 0)])
+        # torque produced along the top of the chamber (e.g. at the tip)
+        dtau_T = (self.J.T @ (self.R @ sympy.Matrix([1, 0])) * self.b_C * self.p).subs([(self.s, 1)])
+
+        tau_in = sympy.integrate(dtau_in, (self.s, 0, 1))
+        tau_out = sympy.integrate(dtau_out, (self.s, 0, 1))
+        tau_B = sympy.integrate(dtau_B, (self.r, sign*self.R_C_in, sign*self.R_C_out))
+        tau_T = sympy.integrate(dtau_T, (self.r, sign*self.R_C_in, sign*self.R_C_out))
+        tau = tau_in + tau_out + tau_B + tau_T
+
+        # assume pressure of 1 bar
+        tau = tau.subs(self.p, 1)
+
+        line1, line2, line3 = plot(tau[0].subs(self.delta_L_i, 1.0*self.L_0_i), 
+                                   tau[0].subs(self.delta_L_i, 1.1*self.L_0_i), 
+                                   tau[0].subs(self.delta_L_i, 1.2*self.L_0_i), 
+                                   (self.Delta_i, -45/180*pi*self.d_i, 45/180*pi*self.d_i), 
+                                   xlabel=r'$\Delta$ [m]', ylabel=r"$\tau_0$", show=False)
+        x1, y1 = line1.get_points()
+        x2, y2 = line2.get_points()
+        x3, y3 = line3.get_points()
+        plt.plot(x1, y1, x2, y2, x3, y3)
+        plt.title(f"{side} pneumatic chamber")
+        plt.xlabel(r'$\Delta_i$ [m]')
+        plt.ylabel(r"$\tau_0$ [N]")
+        plt.legend([r"$\delta L=0 \%$", r"$\delta L=10 \%$", r"$\delta L=20 \%$"])
+        plt.show()
+
+        line1, = plot(tau[1], (self.Delta_i, -45/180*pi*self.d_i, 45/180*pi*self.d_i), 
+                      xlabel=r'$\Delta$ [m]', ylabel=r"$\tau_1$ [N]", show=False)
+        x1, y1 = line1.get_points()
+        plt.plot(x1, y1)
+        plt.title(f"{side} pneumatic chamber")
+        plt.xlabel(r'$\Delta_i$ [m]')
+        plt.ylabel(r"$\tau_1$ [N]")
+        plt.show()
+
 if __name__ == '__main__':
-    model = JacobianBasedPneumaticActuationModel()
-    # model.perpendicular_force_at_tip()
-    # model.force_at_center_of_pressure_at_tip()
+    model = JacobianBasedPlanarPneumaticActuationModel()
+    model.perpendicular_force_at_tip()
+    model.force_at_center_of_pressure_at_tip()
     model.pneumatic_tube()
+    model.pneumatic_chamber(side="left")
+    model.pneumatic_chamber(side="right")
