@@ -308,8 +308,8 @@ if __name__ == '__main__':
     b_C = 8.7*10**(-3)
 
     model = JacobianBasedPlanarPneumaticActuationModel(L_0, d, R_C_in, R_C_out, b_C)
-    # model.perpendicular_force_at_tip()
-    # model.force_at_center_of_pressure_at_tip()
-    # model.pneumatic_tube()
+    model.perpendicular_force_at_tip()
+    model.force_at_center_of_pressure_at_tip()
+    model.pneumatic_tube()
     model.pneumatic_chamber(side="left")
     model.pneumatic_chamber(side="right")
