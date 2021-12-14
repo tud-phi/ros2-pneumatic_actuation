@@ -237,16 +237,16 @@ class JacobianBasedPlanarPneumaticActuationModel:
         tau = tau_in + tau_out + tau_B + tau_T
 
         # assume relative pressure of 300 mBar
-        p = 300*1e2
-        tau = tau.subs(self.p, p)
-        tau_in = tau_in.subs(self.p, p)
-        tau_out = tau_out.subs(self.p, p)
-        tau_B = tau_B.subs(self.p, p)
-        tau_T = tau_T.subs(self.p, p)
+        p_const = 300*1e2
+        tau_p_const = tau.subs(self.p, p_const)
+        tau_in_p_const = tau_in.subs(self.p, p_const)
+        tau_out_p_const = tau_out.subs(self.p, p_const)
+        tau_B_p_const = tau_B.subs(self.p, p_const)
+        tau_T_p_const = tau_T.subs(self.p, p_const)
 
-        line1, line2, line3 = plot(tau[0].subs(self.delta_L_i, 1.0*self.L_0), 
-                                   tau[0].subs(self.delta_L_i, 1.1*self.L_0), 
-                                   tau[0].subs(self.delta_L_i, 1.2*self.L_0), 
+        line1, line2, line3 = plot(tau_p_const[0].subs(self.delta_L_i, 1.0*self.L_0), 
+                                   tau_p_const[0].subs(self.delta_L_i, 1.1*self.L_0), 
+                                   tau_p_const[0].subs(self.delta_L_i, 1.2*self.L_0), 
                                    (self.Delta_i, -self.Delta_max, self.Delta_max), 
                                    xlabel=r'$\Delta$ [m]', ylabel=r"$\tau_0$", show=False)
         x1, y1 = line1.get_points()
@@ -258,11 +258,27 @@ class JacobianBasedPlanarPneumaticActuationModel:
         plt.xlabel(r'$\Delta_i$ [m]')
         plt.ylabel(r"$\tau_0$ [N]")
         plt.legend([r"$\delta L=0 \%$", r"$\delta L=10 \%$", r"$\delta L=20 \%$"])
+        plt.show()                  
+
+        line1, line2, line3 = plot(tau[0].subs([(self.delta_L_i, 1.0*self.L_0), (self.p, 0)]), 
+                                   tau[0].subs([(self.delta_L_i, 1.0*self.L_0), (self.p, 150*1e2)]), 
+                                   tau[0].subs([(self.delta_L_i, 1.0*self.L_0), (self.p, 300*1e2)]),
+                                   (self.Delta_i, -self.Delta_max, self.Delta_max), 
+                                   xlabel=r'$\Delta$ [m]', ylabel=r"$\tau_0$", show=False)
+        x1, y1 = line1.get_points()
+        x2, y2 = line2.get_points()
+        x3, y3 = line3.get_points()
+        plt.figure(figsize=self.figsize)
+        plt.plot(x1, y1, x2, y2, x3, y3)
+        plt.title(rf"{side} pneumatic chamber: torque on $\Delta$")
+        plt.xlabel(r'$\Delta_i$ [m]')
+        plt.ylabel(r"$\tau_0$ [N]")
+        plt.legend([r"$p=0 \mathrm{mBar}$", r"$p=150 \mathrm{mBar}$", r"$p=300 \mathrm{mBar}$"])
         plt.show()
 
-        line1, line2, line3 = plot(tau_in[0].subs(self.delta_L_i, 1.0*self.L_0), 
-                                   tau_in[0].subs(self.delta_L_i, 1.1*self.L_0), 
-                                   tau_in[0].subs(self.delta_L_i, 1.2*self.L_0), 
+        line1, line2, line3 = plot(tau_in_p_const[0].subs(self.delta_L_i, 1.0*self.L_0), 
+                                   tau_in_p_const[0].subs(self.delta_L_i, 1.1*self.L_0), 
+                                   tau_in_p_const[0].subs(self.delta_L_i, 1.2*self.L_0), 
                                    (self.Delta_i, -self.Delta_max, self.Delta_max), 
                                    show=False)
         x1, y1 = line1.get_points()
@@ -276,9 +292,9 @@ class JacobianBasedPlanarPneumaticActuationModel:
         plt.legend([r"$\delta L=0 \%$", r"$\delta L=10 \%$", r"$\delta L=20 \%$"])
         plt.show()
 
-        line1, line2, line3 = plot(tau_out[0].subs(self.delta_L_i, 1.0*self.L_0), 
-                                   tau_out[0].subs(self.delta_L_i, 1.1*self.L_0), 
-                                   tau_out[0].subs(self.delta_L_i, 1.2*self.L_0), 
+        line1, line2, line3 = plot(tau_out_p_const[0].subs(self.delta_L_i, 1.0*self.L_0), 
+                                   tau_out_p_const[0].subs(self.delta_L_i, 1.1*self.L_0), 
+                                   tau_out_p_const[0].subs(self.delta_L_i, 1.2*self.L_0), 
                                    (self.Delta_i, -self.Delta_max, self.Delta_max), 
                                    show=False)
         x1, y1 = line1.get_points()
@@ -292,9 +308,9 @@ class JacobianBasedPlanarPneumaticActuationModel:
         plt.legend([r"$\delta L=0 \%$", r"$\delta L=10 \%$", r"$\delta L=20 \%$"])
         plt.show()
 
-        line1, line2, line3 = plot(tau_B[0].subs(self.delta_L_i, 1.0*self.L_0), 
-                                   tau_B[0].subs(self.delta_L_i, 1.1*self.L_0), 
-                                   tau_B[0].subs(self.delta_L_i, 1.2*self.L_0), 
+        line1, line2, line3 = plot(tau_B_p_const[0].subs(self.delta_L_i, 1.0*self.L_0), 
+                                   tau_B_p_const[0].subs(self.delta_L_i, 1.1*self.L_0), 
+                                   tau_B_p_const[0].subs(self.delta_L_i, 1.2*self.L_0), 
                                    (self.Delta_i, -self.Delta_max, self.Delta_max), 
                                    show=False)
         x1, y1 = line1.get_points()
@@ -308,9 +324,9 @@ class JacobianBasedPlanarPneumaticActuationModel:
         plt.legend([r"$\delta L=0 \%$", r"$\delta L=10 \%$", r"$\delta L=20 \%$"])
         plt.show()
 
-        line1, line2, line3 = plot(tau_T[0].subs(self.delta_L_i, 1.0*self.L_0), 
-                                   tau_T[0].subs(self.delta_L_i, 1.1*self.L_0), 
-                                   tau_T[0].subs(self.delta_L_i, 1.2*self.L_0), 
+        line1, line2, line3 = plot(tau_T_p_const[0].subs(self.delta_L_i, 1.0*self.L_0), 
+                                   tau_T_p_const[0].subs(self.delta_L_i, 1.1*self.L_0), 
+                                   tau_T_p_const[0].subs(self.delta_L_i, 1.2*self.L_0), 
                                    (self.Delta_i, -self.Delta_max, self.Delta_max), 
                                    show=False)
         x1, y1 = line1.get_points()
@@ -324,7 +340,7 @@ class JacobianBasedPlanarPneumaticActuationModel:
         plt.legend([r"$\delta L=0 \%$", r"$\delta L=10 \%$", r"$\delta L=20 \%$"])
         plt.show()
 
-        line1, = plot(tau[1], (self.Delta_i, -self.Delta_max, self.Delta_max), 
+        line1, = plot(tau_p_const[1], (self.Delta_i, -self.Delta_max, self.Delta_max), 
                       xlabel=r'$\Delta$ [m]', ylabel=r"$\tau_1$ [N]", show=False)
         x1, y1 = line1.get_points()
         plt.figure(figsize=self.figsize)
