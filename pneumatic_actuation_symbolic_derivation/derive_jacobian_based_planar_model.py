@@ -51,9 +51,45 @@ class JacobianBasedPlanarPneumaticActuationModel:
         # Plotting settings
         self.figsize = (8, 4.8)
 
-    def perpendicular_force_at_tip(self):
+    def force_x_dir_at_tip(self):
         """
-        Computes and plots perpendicular force at the tip of the segment.
+        Computes and plots force in positive x-direction at the tip of the segment.
+        :return:
+        """
+        # define normal vector at the tip of the segment
+        n_i = self.R @ sympy.Matrix([1, 0])
+
+        tau_i = (self.J.T @ sympy.Matrix(n_i) * self.f).subs([(self.s, 1), (self.r, 0)])
+
+        line1, line2, line3 = plot(tau_i[0].subs(self.delta_L_i, 1.0*self.L_0), 
+                                   tau_i[0].subs(self.delta_L_i, 1.1*self.L_0), 
+                                   tau_i[0].subs(self.delta_L_i, 1.2*self.L_0), 
+                                   (self.Delta_i, -self.Delta_max, self.Delta_max),
+                                   xlabel=r'$\Delta$ [m]', ylabel=r"$\tau_0$ [N]", show=False)
+        x1, y1 = line1.get_points()
+        x2, y2 = line2.get_points()
+        x3, y3 = line3.get_points()
+        plt.figure(figsize=self.figsize)
+        plt.plot(x1, y1, x2, y2, x3, y3)
+        plt.title("Force in x-direction at the tip of the segment")
+        plt.xlabel(r'$\Delta$ [m]')
+        plt.ylabel(r"$\tau_0$ [N]")
+        plt.legend([r"$\delta L=0 \%$", r"$\delta L=10 \%$", r"$\delta L=20 \%$"])
+        plt.show()
+
+        line1, = plot(tau_i[1], (self.Delta_i, -self.Delta_max, self.Delta_max),
+                     xlabel=r'$\Delta$ [m]', ylabel=r"$\tau_1$ [N]", show=False)
+        x1, y1 = line1.get_points()
+        plt.figure(figsize=self.figsize)
+        plt.plot(x1, y1)
+        plt.title("Force in x-direction at the tip of the segment")
+        plt.xlabel(r'$\Delta$ [m]')
+        plt.ylabel(r"$\tau_1$ [N]")
+        plt.show()
+
+    def force_y_dir_at_tip(self):
+        """
+        Computes and plots force in positive y-direction at the tip of the segment.
         :return:
         """
         # define normal vector at the tip of the segment
@@ -64,27 +100,25 @@ class JacobianBasedPlanarPneumaticActuationModel:
         line1, line2, line3 = plot(tau_i[0].subs(self.delta_L_i, 1.0*self.L_0), 
                                    tau_i[0].subs(self.delta_L_i, 1.1*self.L_0), 
                                    tau_i[0].subs(self.delta_L_i, 1.2*self.L_0), 
-                                   (self.Delta_i, -self.Delta_max, self.Delta_max), 
-                                   title="Perpendicular force at the tip of the segment", 
+                                   (self.Delta_i, -self.Delta_max, self.Delta_max),
                                    xlabel=r'$\Delta$ [m]', ylabel=r"$\tau_0$ [N]", show=False)
         x1, y1 = line1.get_points()
         x2, y2 = line2.get_points()
         x3, y3 = line3.get_points()
         plt.figure(figsize=self.figsize)
         plt.plot(x1, y1, x2, y2, x3, y3)
-        plt.title("Perpendicular force at the tip of the segment")
+        plt.title("Force in y-direction at the tip of the segment")
         plt.xlabel(r'$\Delta$ [m]')
         plt.ylabel(r"$\tau_0$ [N]")
         plt.legend([r"$\delta L=0 \%$", r"$\delta L=10 \%$", r"$\delta L=20 \%$"])
         plt.show()
 
-        line1, = plot(tau_i[1], (self.Delta_i, -self.Delta_max, self.Delta_max), 
-                     title="Perpendicular force at the tip of the segment", 
+        line1, = plot(tau_i[1], (self.Delta_i, -self.Delta_max, self.Delta_max),
                      xlabel=r'$\Delta$ [m]', ylabel=r"$\tau_1$ [N]", show=False)
         x1, y1 = line1.get_points()
         plt.figure(figsize=self.figsize)
         plt.plot(x1, y1)
-        plt.title("Perpendicular force at the tip of the segment")
+        plt.title("Force in y-direction at the tip of the segment")
         plt.xlabel(r'$\Delta$ [m]')
         plt.ylabel(r"$\tau_1$ [N]")
         plt.show()
@@ -308,7 +342,8 @@ if __name__ == '__main__':
     b_C = 8.7*10**(-3)
 
     model = JacobianBasedPlanarPneumaticActuationModel(L_0, d, R_C_in, R_C_out, b_C)
-    model.perpendicular_force_at_tip()
+    model.force_x_dir_at_tip()
+    model.force_y_dir_at_tip()
     model.force_at_center_of_pressure_at_tip()
     model.pneumatic_tube()
     model.pneumatic_chamber(side="left")
