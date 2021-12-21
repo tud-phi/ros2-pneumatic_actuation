@@ -308,6 +308,22 @@ class JacobianBasedPlanarPneumaticActuationModel:
         plt.legend([r"$\delta L=0 \%$", r"$\delta L=10 \%$", r"$\delta L=20 \%$"])
         plt.show()
 
+        line1, line2, line3 = plot((tau_out_p_const[0] + tau_in_p_const[0]).subs(self.delta_L_i, 1.0*self.L_0), 
+                                   (tau_out_p_const[0] + tau_in_p_const[0]).subs(self.delta_L_i, 1.1*self.L_0), 
+                                   (tau_out_p_const[0] + tau_in_p_const[0]).subs(self.delta_L_i, 1.2*self.L_0), 
+                                   (self.Delta_i, -self.Delta_max, self.Delta_max), 
+                                   show=False)
+        x1, y1 = line1.get_points()
+        x2, y2 = line2.get_points()
+        x3, y3 = line3.get_points()
+        plt.figure(figsize=self.figsize)
+        plt.plot(x1, y1, x2, y2, x3, y3)
+        plt.title(rf"{side} pneumatic chamber: torque on $\Delta$ produced along sum of outer and inner chamber wall")
+        plt.xlabel(r'$\Delta_i$ [m]')
+        plt.ylabel(r"$\tau_{\mathrm{out},0}$ [N]")
+        plt.legend([r"$\delta L=0 \%$", r"$\delta L=10 \%$", r"$\delta L=20 \%$"])
+        plt.show()
+
         line1, line2, line3 = plot(tau_B_p_const[0].subs(self.delta_L_i, 1.0*self.L_0), 
                                    tau_B_p_const[0].subs(self.delta_L_i, 1.1*self.L_0), 
                                    tau_B_p_const[0].subs(self.delta_L_i, 1.2*self.L_0), 
