@@ -8,6 +8,7 @@ def generate_launch_description():
     num_chambers = 4
 
     commanded_pressures_topic = "/pneumatic_actuation/commanded_pressures"
+    measured_pressures_topic = "/pneumatic_actuation/measured_pressures"
     vtem_status_topic = "/vtem_control/vtem_status"
 
     common_vtem_params = {"num_valves": num_segments*num_chambers, "modbus_node": "192.168.4.3", "modbus_service": "502"}
@@ -54,4 +55,16 @@ def generate_launch_description():
                 {"output_pressures_topic": "output_pressures", "pub_freq": 50., "vtem_status_topic": vtem_status_topic}
             ]
         ),
+        Node(
+            package="topic_tools",
+            namespace='relay_output_pressures',
+            executable="relay",
+            parameters=[{"input_topic": "/vtem_control/output_pressures", "output_topic": measured_pressures_topic}]
+        ),
+        Node(
+            package="topic_tools",
+            namespace='relay_output_pressures_array',
+            executable="relay",
+            parameters=[{"input_topic": "/vtem_control/output_pressures", "output_topic": f"{measured_pressures_topic}_array"}]
+        )
     ])
