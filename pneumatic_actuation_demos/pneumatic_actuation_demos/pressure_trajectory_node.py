@@ -27,9 +27,13 @@ class SegmentTrajectoryType(IntEnum):
     HALF_8_SHAPE = 20
     FULL_8_SHAPE = 21
     # System identification signals
+    # Chirp: https://en.wikipedia.org/wiki/Sine_wave
     CHIRP_X = 30
     CHIRP_Y = 31
-
+    # Generalized binary noise
+    # https://www.sciencedirect.com/science/article/abs/pii/000510989090156C
+    GBN_X = 34
+    GBN_Y = 35
 
 class PressureTrajectoryNode(Node):
 
@@ -104,9 +108,18 @@ class PressureTrajectoryNode(Node):
 
         self.msg: FluidPressures = self.prep_fluid_pressures_msg()
 
-        # chirp trajectory parameters
+        # random seed
+        self.seed = 0
+        np.random.seed(self.seed)
+
+        # system identification signals parameters
         self.chirp_freq0 = 0. # [Hz] starting frequency of chirp
-        self.chirp_rate = 0.05 # [Hz/s] chirp rate
+        self.declare_parameter('chirp_rate', 0.05) # [Hz/s] chirp rate
+        self.chirp_rate = self.get_parameter('chirp_rate').value
+
+        self.declare_parameter('gbn_probability', 95/100)
+        self.gbn_probability = self.get_parameter('gbn_probability').value # [-]
+        self.gbn_binary_value = 0
 
     def timer_callback(self):
         if self.state == ExperimentState.BOOT_UP:
@@ -146,6 +159,10 @@ class PressureTrajectoryNode(Node):
                     self.commanded_forces[segment_idx] = self.chirp_x_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.CHIRP_Y:
                     self.commanded_forces[segment_idx] = self.chirp_y_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
+                elif trajectory_type == SegmentTrajectoryType.GBN_X:
+                    self.commanded_forces[segment_idx] = self.gbn_x_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
+                elif trajectory_type == SegmentTrajectoryType.GBN_Y:
+                    self.commanded_forces[segment_idx] = self.gbn_y_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 else:
                     raise NotImplementedError
 
@@ -240,6 +257,40 @@ class PressureTrajectoryNode(Node):
 
         f_x = 0
         f_y = force_peak * np.sin(2 * np.pi * freq * trajectory_time)
+
+        return np.array([f_x, f_y])
+
+    def gbn_x_trajectory(self, trajectory_time, trajectory_period, force_peak) -> np.array:
+        x = np.random.choice(2, 1, p=[self.gbn_probability, 1-self.gbn_probability])
+
+        if x == 1:
+            # we need to switch the binary signal
+            if self.gbn_binary_value == 1:
+                self.gbn_binary_value = 0
+            elif self.gbn_binary_value == 0:
+                self.gbn_binary_value = 1
+            else:
+                raise ValueError
+
+        f_x = self.gbn_binary_value * force_peak
+        f_y = 0
+
+        return np.array([f_x, f_y])
+
+    def gbn_y_trajectory(self, trajectory_time, trajectory_period, force_peak) -> np.array:
+        x = np.random.choice(2, 1, p=[self.gbn_probability, 1-self.gbn_probability])
+
+        if x == 1:
+            # we need to switch the binary signal
+            if self.gbn_binary_value == 1:
+                self.gbn_binary_value = 0
+            elif self.gbn_binary_value == 0:
+                self.gbn_binary_value = 1
+            else:
+                raise ValueError
+
+        f_y = 0
+        f_y = self.gbn_binary_value * force_peak
 
         return np.array([f_x, f_y])
 
