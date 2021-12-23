@@ -4,7 +4,7 @@
   <name>pneumatic_actuation_demos</name>
   <version>0.0.0</version>
   <description>Demos for pneumatic actuation of a continuum soft robot arm</description>
-  <maintainer email="maximilian@stoelzle.ch">Maximilian Stoelzle</maintainer>
+  <maintainer email="maximilian@stoelzle.ch">Maximilian Stölzle</maintainer>
   <license>MIT</license>
 
   <depend>topic_tools</depend>

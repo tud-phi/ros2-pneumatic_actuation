@@ -31,7 +31,7 @@ def generate_launch_description():
                     "num_segments": num_segments,
                     "pressure_offset": 125*100,
                     "radius_CoP": 0.1,
-                    "segment_trajectories": [SegmentTrajectoryType.CIRCLE],
+                    "segment_trajectories": [SegmentTrajectoryType.CHIRP_X],
                     "trajectory_frequencies": [0.1],
                     "vtem_status_topic": vtem_status_topic,
                 }

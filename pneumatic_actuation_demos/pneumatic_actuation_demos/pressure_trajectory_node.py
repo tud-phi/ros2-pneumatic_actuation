@@ -22,10 +22,13 @@ class SegmentTrajectoryType(IntEnum):
     Enum class for the trajectory type of an individual segment.
     """
     BENDING_1D_X = 0
-    BENDING_1D_Y = 0
+    BENDING_1D_Y = 1
     CIRCLE = 10
     HALF_8_SHAPE = 20
     FULL_8_SHAPE = 21
+    # System identification signals
+    CHIRP_X = 30
+    CHIRP_Y = 31
 
 
 class PressureTrajectoryNode(Node):
@@ -74,16 +77,16 @@ class PressureTrajectoryNode(Node):
         self.declare_parameter('deflate_time', 5)
         self.deflate_time = self.get_parameter('deflate_time').value
 
-        self.declare_parameter('segment_trajectories', [SegmentTrajectoryType.BENDING_1D_X])
+        self.declare_parameter('segment_trajectories', [SegmentTrajectoryType.BENDING_1D_X for i in range(self.num_segments)])
         self.segment_trajectories = self.get_parameter('segment_trajectories').value
         assert len(self.segment_trajectories) == self.num_segments
 
-        self.declare_parameter('trajectory_frequencies', [0.1])
+        self.declare_parameter('trajectory_frequencies', [0.1 for i in range(self.num_segments)])
         self.trajectory_frequencies = self.get_parameter('trajectory_frequencies').value
         assert len(self.trajectory_frequencies) == self.num_segments
         self.trajectory_periods = [1/x for x in self.trajectory_frequencies]
 
-        self.declare_parameter('pressure_peaks', [1500]) # [N]
+        self.declare_parameter('pressure_peaks', [1500 for i in range(self.num_segments)]) # [N]
         self.pressure_peaks = self.get_parameter('pressure_peaks').value # [N]
         assert len(self.pressure_peaks) == self.num_segments
 
@@ -100,6 +103,10 @@ class PressureTrajectoryNode(Node):
         self.commanded_pressures = np.zeros(shape=(self.num_segments, self.num_chambers))
 
         self.msg: FluidPressures = self.prep_fluid_pressures_msg()
+
+        # chirp trajectory parameters
+        self.chirp_freq0 = 0. # [Hz] starting frequency of chirp
+        self.chirp_rate = 0.05 # [Hz/s] chirp rate
 
     def timer_callback(self):
         if self.state == ExperimentState.BOOT_UP:
@@ -135,6 +142,10 @@ class PressureTrajectoryNode(Node):
                     self.commanded_forces[segment_idx] = self.half_8_shape_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.FULL_8_SHAPE:
                     self.commanded_forces[segment_idx] = self.full_8_shape_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
+                elif trajectory_type == SegmentTrajectoryType.CHIRP_X:
+                    self.commanded_forces[segment_idx] = self.chirp_x_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
+                elif trajectory_type == SegmentTrajectoryType.CHIRP_Y:
+                    self.commanded_forces[segment_idx] = self.chirp_y_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 else:
                     raise NotImplementedError
 
@@ -213,6 +224,22 @@ class PressureTrajectoryNode(Node):
     def circle_trajectory(self, trajectory_time, trajectory_period, force_peak) -> np.array:
         f_x = force_peak * np.cos(2*np.pi*trajectory_time/trajectory_period)
         f_y = force_peak * np.sin(2*np.pi*trajectory_time/trajectory_period)
+
+        return np.array([f_x, f_y])
+
+    def chirp_x_trajectory(self, trajectory_time, trajectory_period, force_peak) -> np.array:
+        freq = self.chirp_freq0 + self.chirp_rate * trajectory_time
+
+        f_x = force_peak * np.sin(2 * np.pi * freq * trajectory_time)
+        f_y = 0
+
+        return np.array([f_x, f_y])
+
+    def chirp_y_trajectory(self, trajectory_time, trajectory_period, force_peak) -> np.array:
+        freq = self.chirp_freq0 + self.chirp_rate * trajectory_time
+
+        f_x = 0
+        f_y = force_peak * np.sin(2 * np.pi * freq * trajectory_time)
 
         return np.array([f_x, f_y])
 
