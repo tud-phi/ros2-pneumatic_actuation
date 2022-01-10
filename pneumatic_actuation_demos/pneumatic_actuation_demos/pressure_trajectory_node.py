@@ -114,7 +114,7 @@ class PressureTrajectoryNode(Node):
 
         # system identification signals parameters
         self.chirp_freq0 = 0. # [Hz] starting frequency of chirp
-        self.declare_parameter('chirp_rate', 0.05) # [Hz/s] chirp rate
+        self.declare_parameter('chirp_rate', 0.01) # [Hz/s] chirp rate
         self.chirp_rate = self.get_parameter('chirp_rate').value
 
         self.declare_parameter('gbn_probability', 95/100)
