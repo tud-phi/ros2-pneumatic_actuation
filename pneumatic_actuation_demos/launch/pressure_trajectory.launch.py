@@ -65,6 +65,6 @@ def generate_launch_description():
             package="topic_tools",
             namespace='relay_output_pressures_array',
             executable="relay",
-            parameters=[{"input_topic": "/vtem_control/output_pressures", "output_topic": f"{measured_pressures_topic}_array"}]
+            parameters=[{"input_topic": "/vtem_control/output_pressures_array", "output_topic": f"{measured_pressures_topic}_array"}]
         )
     ])
