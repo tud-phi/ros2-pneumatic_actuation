@@ -16,7 +16,7 @@ setup(
     ],
     install_requires=[
         'setuptools',
-        'py-gbn'
+        'pygbn'
     ],
     zip_safe=True,
     maintainer='Maximilian Stoelzle',
