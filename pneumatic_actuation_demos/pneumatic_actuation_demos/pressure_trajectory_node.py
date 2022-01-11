@@ -2,6 +2,7 @@ from enum import IntEnum
 import numpy as np
 import rclpy
 from rclpy.node import Node
+from pygbn import gbn
 
 from pneumatic_actuation_msgs.msg import FluidPressures
 from sensor_msgs.msg import FluidPressure
@@ -117,9 +118,16 @@ class PressureTrajectoryNode(Node):
         self.declare_parameter('chirp_rate', 0.01) # [Hz/s] chirp rate
         self.chirp_rate = self.get_parameter('chirp_rate').value
 
-        self.declare_parameter('gbn_probability', 95/100)
-        self.gbn_probability = self.get_parameter('gbn_probability').value # [-]
-        self.gbn_binary_value = 0
+        if SegmentTrajectoryType.GBN_X in self.segment_trajectories \
+            or SegmentTrajectoryType.GBN_Y in self.segment_trajectories:
+            # self.declare_parameter('gbn_ts', 95/100)
+            # self.gbn_ts = self.get_parameter('gbn_ts').value # [s]
+            # self.gbn_sequence = gbn(h=self.timer_period, T=self.experiment_duration, A=1, ts=self.gbn_ts, flag=1)
+
+            self.gbn_sequences = []
+            for trajectory_period in self.trajectory_periods:
+                self.gbn_sequences.append(gbn(h=self.timer_period, T=self.experiment_duration, 
+                                          A=1, ts=trajectory_period, flag=1))
 
     def timer_callback(self):
         if self.state == ExperimentState.BOOT_UP:
@@ -160,9 +168,9 @@ class PressureTrajectoryNode(Node):
                 elif trajectory_type == SegmentTrajectoryType.CHIRP_Y:
                     self.commanded_forces[segment_idx] = self.chirp_y_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.GBN_X:
-                    self.commanded_forces[segment_idx] = self.gbn_x_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
+                    self.commanded_forces[segment_idx] = self.gbn_x_trajectory(segment_idx, trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.GBN_Y:
-                    self.commanded_forces[segment_idx] = self.gbn_y_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
+                    self.commanded_forces[segment_idx] = self.gbn_y_trajectory(segment_idx, trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 else:
                     raise NotImplementedError
 
@@ -200,7 +208,8 @@ class PressureTrajectoryNode(Node):
     def vtem_status_callback(self, msg):
         self.vtem_status = msg.data
 
-    def bending_1d_x_trajectory(self, trajectory_time, trajectory_period, force_peak) -> np.array:
+    def bending_1d_x_trajectory(self, trajectory_time: float, trajectory_period: float, 
+                                force_peak: float) -> np.array:
         if trajectory_time < 0.5*trajectory_period:
             f_x = force_peak * trajectory_time / (0.5*trajectory_period)
         else:
@@ -210,7 +219,8 @@ class PressureTrajectoryNode(Node):
 
         return np.array([f_x, f_y])
 
-    def bending_1d_y_trajectory(self, trajectory_time, trajectory_period, force_peak) -> np.array:
+    def bending_1d_y_trajectory(self, trajectory_time: float, trajectory_period: float, 
+                                force_peak: float) -> np.array:
         f_x = 0
 
         if trajectory_time < 0.5*trajectory_period:
@@ -220,7 +230,8 @@ class PressureTrajectoryNode(Node):
 
         return np.array([f_x, f_y])
 
-    def half_8_shape_trajectory(self, trajectory_time, trajectory_period, force_peak) -> np.array:
+    def half_8_shape_trajectory(self, trajectory_time: float, trajectory_period: float, 
+                                force_peak: float) -> np.array:
         # for description of trajectory: https://www.overleaf.com/read/dxvsqnksnqgt
         F_x, F_y = 1, 0.5
 
@@ -229,7 +240,8 @@ class PressureTrajectoryNode(Node):
 
         return np.array([f_x, f_y])
 
-    def full_8_shape_trajectory(self, trajectory_time, trajectory_period, force_peak) -> np.array:
+    def full_8_shape_trajectory(self, trajectory_time: float, trajectory_period: float, 
+                                force_peak: float) -> np.array:
         # for description of trajectory: https://www.overleaf.com/read/dxvsqnksnqgt
         F_x, F_y = 2, 1
 
@@ -238,13 +250,15 @@ class PressureTrajectoryNode(Node):
 
         return np.array([f_x, f_y])
 
-    def circle_trajectory(self, trajectory_time, trajectory_period, force_peak) -> np.array:
+    def circle_trajectory(self, trajectory_time: float, trajectory_period: float, 
+                          force_peak: float) -> np.array:
         f_x = force_peak * np.cos(2*np.pi*trajectory_time/trajectory_period)
         f_y = force_peak * np.sin(2*np.pi*trajectory_time/trajectory_period)
 
         return np.array([f_x, f_y])
 
-    def chirp_x_trajectory(self, trajectory_time, trajectory_period, force_peak) -> np.array:
+    def chirp_x_trajectory(self, trajectory_time: float, trajectory_period: float, 
+                           force_peak: float) -> np.array:
         freq = self.chirp_freq0 + self.chirp_rate * trajectory_time
 
         f_x = force_peak * np.sin(2 * np.pi * freq * trajectory_time)
@@ -252,7 +266,8 @@ class PressureTrajectoryNode(Node):
 
         return np.array([f_x, f_y])
 
-    def chirp_y_trajectory(self, trajectory_time, trajectory_period, force_peak) -> np.array:
+    def chirp_y_trajectory(self, trajectory_time: float, trajectory_period: float, 
+                           force_peak: float) -> np.array:
         freq = self.chirp_freq0 + self.chirp_rate * trajectory_time
 
         f_x = 0
@@ -260,37 +275,27 @@ class PressureTrajectoryNode(Node):
 
         return np.array([f_x, f_y])
 
-    def gbn_x_trajectory(self, trajectory_time, trajectory_period, force_peak) -> np.array:
-        x = np.random.choice(2, 1, p=[self.gbn_probability, 1-self.gbn_probability])
+    def gbn_x_trajectory(self, segment_idx: int, trajectory_time: float, 
+                         trajectory_period: float, force_peak: float) -> np.array:
+        gbn_value = self.gbn_sequences[segment_idx][int(self.state_counter)]
 
-        if x == 1:
-            # we need to switch the binary signal
-            if self.gbn_binary_value == 1:
-                self.gbn_binary_value = 0
-            elif self.gbn_binary_value == 0:
-                self.gbn_binary_value = 1
-            else:
-                raise ValueError
+        # we need to correct dbn value so that it is in range 0 to 1
+        gbn_value = (gbn_value + 1) / 2
 
-        f_x = self.gbn_binary_value * force_peak
+        f_x = gbn_value * force_peak
         f_y = 0
 
         return np.array([f_x, f_y])
 
-    def gbn_y_trajectory(self, trajectory_time, trajectory_period, force_peak) -> np.array:
-        x = np.random.choice(2, 1, p=[self.gbn_probability, 1-self.gbn_probability])
+    def gbn_y_trajectory(self, segment_idx: int, trajectory_time: float, 
+                         trajectory_period: float, force_peak: float) -> np.array:
+        gbn_value = self.gbn_sequences[segment_idx][int(self.state_counter)]
 
-        if x == 1:
-            # we need to switch the binary signal
-            if self.gbn_binary_value == 1:
-                self.gbn_binary_value = 0
-            elif self.gbn_binary_value == 0:
-                self.gbn_binary_value = 1
-            else:
-                raise ValueError
+        # we need to correct dbn value so that it is in range 0 to 1
+        gbn_value = (gbn_value + 1) / 2
 
-        f_y = 0
-        f_y = self.gbn_binary_value * force_peak
+        f_x = 0
+        f_y = gbn_value * force_peak
 
         return np.array([f_x, f_y])
 
