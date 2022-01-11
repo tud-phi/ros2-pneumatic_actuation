@@ -68,7 +68,7 @@ class PressureTrajectoryNode(Node):
         self.radius_CoP = self.get_parameter('radius_CoP').value
 
         if self.num_chambers == 4:
-            self.A_p = 1 / self.radius_CoP * np.array([[1/2, 0], [0, 1/2], [-1/2, 0], [0, -1/2]])
+            self.A_p = 1 / self.radius_CoP * np.array([[1/2, 0], [-1/2, 0], [0, 1/2], [0, -1/2]])
         elif self.num_chambers == 3:
             self.A_p = 1 / self.radius_CoP * np.array([[2/3, 0], [-1/3, 1/np.sqrt(3)], [-1/3, -1/np.sqrt(3)]])
         else:
@@ -309,10 +309,10 @@ class PressureTrajectoryNode(Node):
 
             pressures_segment_sanitized = np.zeros_like(pressures_segment)
             if self.num_chambers == 4:
-                pressures_segment_sanitized[0] = pressures_segment[0] - np.min(np.stack([0, pressures_segment[0], pressures_segment[2]], axis=0))
-                pressures_segment_sanitized[1] = pressures_segment[1] - np.min(np.stack([0, pressures_segment[1], pressures_segment[3]], axis=0))
-                pressures_segment_sanitized[2] = pressures_segment[2] - np.min(np.stack([0, pressures_segment[0], pressures_segment[2]], axis=0))
-                pressures_segment_sanitized[3] = pressures_segment[3] - np.min(np.stack([0, pressures_segment[1], pressures_segment[3]], axis=0))
+                pressures_segment_sanitized[0] = pressures_segment[0] - np.min(np.stack([0, pressures_segment[0], pressures_segment[1]], axis=0))
+                pressures_segment_sanitized[1] = pressures_segment[1] - np.min(np.stack([0, pressures_segment[0], pressures_segment[1]], axis=0))
+                pressures_segment_sanitized[2] = pressures_segment[2] - np.min(np.stack([0, pressures_segment[2], pressures_segment[3]], axis=0))
+                pressures_segment_sanitized[3] = pressures_segment[3] - np.min(np.stack([0, pressures_segment[2], pressures_segment[3]], axis=0))
             elif self.num_chambers == 3:
                 pressures_segment_sanitized = pressures_segment - np.min(np.concatenate([np.array([0]), pressures_segment], axis=0))
             else:
