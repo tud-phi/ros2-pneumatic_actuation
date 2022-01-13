@@ -73,9 +73,9 @@ class PressureTrajectoryNode(Node):
         self.radius_CoP = self.get_parameter('radius_CoP').value
 
         if self.num_chambers == 4:
-            self.A_p = 1 / self.radius_CoP * np.array([[1/2, 0], [-1/2, 0], [0, 1/2], [0, -1/2]])
+            self.A_p = 1 / self.radius_CoP * np.array([[-1/2, 0], [1/2, 0], [0, -1/2], [0, 1/2]])
         elif self.num_chambers == 3:
-            self.A_p = 1 / self.radius_CoP * np.array([[2/3, 0], [-1/3, 1/np.sqrt(3)], [-1/3, -1/np.sqrt(3)]])
+            self.A_p = 1 / self.radius_CoP * np.array([[-2/3, 0], [1/3, -1/np.sqrt(3)], [1/3, 1/np.sqrt(3)]])
         else:
             raise NotImplementedError
 

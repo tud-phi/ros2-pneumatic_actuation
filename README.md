@@ -21,6 +21,7 @@ ros2 launch pneumatic_actuation_demos default.launch.py
 ```
 
 ## Conventions
+### Chambers
 We are using a chamber numbering convention analogue to the parametrized lengths L_i referred to in [[1]](#1).
 This means that for a four chamber segment:
 1. **Chamber 1:** points along the positive local x-axis
@@ -30,6 +31,10 @@ This means that for a four chamber segment:
 5. The positive z-axis is in a right-handed coordinate system to the x- and y-axis and points along the distal end of the robotic arm.
 
 ![Chamber numbering convention used in this repository for the four-chamber per segment case. The figure is adapted from [[1]](#1).](figures/convention_four_chambers.png)
+### Pressure torque
+For a four chamber segment:
+1. If we apply a positive pressure torque in x-direction, the tip's coordinate in the local coordinate frame should increase in x-direction. This means, that we have to reduce the pressure in chamber 1 and increase the pressure in chamber 2.
+2. If we apply a positive pressure torque in y-direction, the tip's coordinate in the local coordinate frame should increase in y-direction. This means, that we have to reduce the pressure in chamber 3 and increase the pressure in chamber 4.
 
 ## Citations
 <a id="1">[1]</a> Della Santina, C., Bicchi, A., & Rus, D. (2019, November). Dynamic control of soft robots with internal constraints in the presence of obstacles. In 2019 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) (pp. 6622-6629). IEEE.
