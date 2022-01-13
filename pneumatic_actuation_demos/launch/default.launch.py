@@ -4,7 +4,7 @@ from launch_ros.actions import Node
 from pneumatic_actuation_demos.pressure_trajectory_node import SegmentTrajectoryType
 
 def generate_launch_description():
-    num_segments = 2
+    num_segments = 1
     num_chambers = 4
 
     commanded_pressures_topic = "/pneumatic_actuation/commanded_pressures"
@@ -24,16 +24,16 @@ def generate_launch_description():
                     "commanded_pressures_topic": commanded_pressures_topic,
                     "commanded_pressures_array_topic": "commanded_pressures_array",
                     "deflate_time": 5,
-                    "experiment_duration": 100,
-                    "pressure_peaks": [75*100, 75*100],
+                    "experiment_duration": 60,
+                    "pressure_peaks": [50*100],
                     "inflate_time": 5,
                     "node_frequency": 50,
                     "num_chambers": num_chambers,
                     "num_segments": num_segments,
                     "pressure_offset": 125*100,
                     "radius_CoP": 0.1,
-                    "segment_trajectories": [SegmentTrajectoryType.GBN_X, SegmentTrajectoryType.GBN_X],
-                    "trajectory_frequencies": [2., 2.],
+                    "segment_trajectories": [SegmentTrajectoryType.BENDING_1D_X],
+                    "trajectory_frequencies": [0.1],
                     "vtem_status_topic": vtem_status_topic,
                 }
             ]

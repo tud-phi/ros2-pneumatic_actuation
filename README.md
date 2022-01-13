@@ -17,7 +17,7 @@ ros2 run pneumatic_actuation_demos pressure_trajectory_node
 ### Run with launch file
 
 ```bash
-ros2 launch pneumatic_actuation_demos pressure_trajectory.launch.py
+ros2 launch pneumatic_actuation_demos default.launch.py
 ```
 
 ## Conventions
