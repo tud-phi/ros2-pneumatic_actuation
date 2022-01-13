@@ -56,6 +56,10 @@ class PressureTrajectoryNode(Node):
         commanded_pressures_array_topic = self.get_parameter('commanded_pressures_array_topic').get_parameter_value().string_value
         self.publisher_array = self.create_publisher(Float64MultiArray, commanded_pressures_array_topic, 10)
 
+        # Option if we should wait with trajectory for VTEM boot-up
+        self.declare_parameter('wait_for_vtem', True)
+        self.wait_for_vtem = self.get_parameter('wait_for_vtem').value
+
         # Subscriber to VTEM status messages
         self.declare_parameter('vtem_status_topic', '/vtem_control/vtem_status')
         vtem_status_topic = self.get_parameter('vtem_status_topic').get_parameter_value().string_value
@@ -131,7 +135,7 @@ class PressureTrajectoryNode(Node):
 
     def timer_callback(self):
         if self.state == ExperimentState.BOOT_UP:
-            if self.vtem_status == True:
+            if self.vtem_status == True or self.wait_for_vtem == False:
                 self.state = ExperimentState.INFLATE
                 self.state_counter = 0
             else:
