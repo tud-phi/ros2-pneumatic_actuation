@@ -124,13 +124,9 @@ class PressureTrajectoryNode(Node):
 
         if SegmentTrajectoryType.GBN_X in self.segment_trajectories \
             or SegmentTrajectoryType.GBN_Y in self.segment_trajectories:
-            # self.declare_parameter('gbn_ts', 95/100)
-            # self.gbn_ts = self.get_parameter('gbn_ts').value # [s]
-            # self.gbn_sequence = gbn(h=self.timer_period, T=self.experiment_duration, A=1, ts=self.gbn_ts, flag=1)
-
             self.gbn_sequences = []
             for trajectory_period in self.trajectory_periods:
-                self.gbn_sequences.append(gbn(h=self.timer_period, T=self.experiment_duration, 
+                self.gbn_sequences.append(gbn(h=self.timer_period, T=1.1*self.experiment_duration, 
                                           A=1, ts=trajectory_period, flag=1))
 
     def timer_callback(self):
@@ -284,7 +280,7 @@ class PressureTrajectoryNode(Node):
         gbn_value = self.gbn_sequences[segment_idx][int(self.state_counter)]
 
         # we need to correct dbn value so that it is in range 0 to 1
-        gbn_value = (gbn_value + 1) / 2
+        # gbn_value = (gbn_value + 1) / 2
 
         f_x = gbn_value * force_peak
         f_y = 0
@@ -296,7 +292,7 @@ class PressureTrajectoryNode(Node):
         gbn_value = self.gbn_sequences[segment_idx][int(self.state_counter)]
 
         # we need to correct dbn value so that it is in range 0 to 1
-        gbn_value = (gbn_value + 1) / 2
+        # gbn_value = (gbn_value + 1) / 2
 
         f_x = 0
         f_y = gbn_value * force_peak
