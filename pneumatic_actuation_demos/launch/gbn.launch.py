@@ -27,7 +27,7 @@ def generate_launch_description():
                     "experiment_duration": 100,
                     "pressure_peaks": [75*100, 75*100],
                     "inflate_time": 5,
-                    "node_frequency": 50,
+                    "node_frequency": 100,
                     "num_chambers": num_chambers,
                     "num_segments": num_segments,
                     "pressure_offset": 125*100,
@@ -57,7 +57,7 @@ def generate_launch_description():
                 executable='output_pressures_pub_node',
                 parameters=[
                     common_vtem_params,
-                    {"output_pressures_topic": "output_pressures", "pub_freq": 50., "vtem_status_topic": vtem_status_topic}
+                    {"output_pressures_topic": "output_pressures", "pub_freq": 100., "vtem_status_topic": vtem_status_topic}
                 ]
             ),
             Node(
