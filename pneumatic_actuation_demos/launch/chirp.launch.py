@@ -26,7 +26,7 @@ def generate_launch_description():
                     "commanded_pressures_array_topic": "commanded_pressures_array",
                     "deflate_time": 5,
                     "experiment_duration": 60,
-                    "pressure_peaks": [75*100, 75*100],
+                    "pressure_peaks": [75*100, 100*100],
                     "inflate_time": 5,
                     "node_frequency": 100,
                     "num_chambers": num_chambers,
@@ -50,7 +50,7 @@ def generate_launch_description():
                 executable='input_pressures_sub_node',
                 parameters=[
                     common_vtem_params,
-                    {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 200*100.0}
+                    {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 225*100.0}
                 ]
             ),
             Node(
