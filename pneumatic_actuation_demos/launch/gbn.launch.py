@@ -24,8 +24,8 @@ def generate_launch_description():
                     "commanded_pressures_topic": commanded_pressures_topic,
                     "commanded_pressures_array_topic": "commanded_pressures_array",
                     "deflate_time": 5,
-                    "experiment_duration": 100,
-                    "pressure_peaks": [75*100, 75*100],
+                    "experiment_duration": 120,
+                    "pressure_peaks": [45*100, 100*100],
                     "inflate_time": 5,
                     "node_frequency": 100,
                     "num_chambers": num_chambers,
@@ -33,7 +33,7 @@ def generate_launch_description():
                     "pressure_offset": 125*100,
                     "radius_CoP": 0.1,
                     "segment_trajectories": [SegmentTrajectoryType.GBN_X, SegmentTrajectoryType.GBN_X],
-                    "trajectory_frequencies": [2., 2.],
+                    "trajectory_frequencies": [0.5, 0.5],
                     "vtem_status_topic": vtem_status_topic,
                 }
             ]
@@ -48,7 +48,7 @@ def generate_launch_description():
                 executable='input_pressures_sub_node',
                 parameters=[
                     common_vtem_params,
-                    {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 200*100.0}
+                    {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 225*100.0}
                 ]
             ),
             Node(
