@@ -32,9 +32,12 @@ This means that for a four chamber segment:
 
 ![Chamber numbering convention used in this repository for the four-chamber per segment case. The figure is adapted from [[1]](#1).](figures/convention_four_chambers.png)
 ### Pressure torque
-For a four chamber segment:
-1. If we apply a positive pressure torque in x-direction, the tip's coordinate in the local coordinate frame should increase in x-direction. This means, that we have to reduce the pressure in chamber 1 and increase the pressure in chamber 2.
-2. If we apply a positive pressure torque in y-direction, the tip's coordinate in the local coordinate frame should increase in y-direction. This means, that we have to reduce the pressure in chamber 3 and increase the pressure in chamber 4.
+We define pressure torques as wrenches produced by perpendicular forces acting on the tip plane of the segment at the Center of Pressure (CoP), which is displaced at a distance of `r_p` from the center-line representing the lever arm of the torque.
+For a four chamber segment, we remind ourselves of the following convention:
+1. When we apply a positive pressure torque in x-direction, the robot should be bending with a positive angle around the x-axis. This means, that we have to increase the pressure in chamber 3 and decrease the pressure in chamber 4. The robot will have negative local y-position coordinates.
+2. When we apply a positive pressure torque in y-direction, the robot should be bending with a positive angle around the y-axis. This means, that we have to increase the pressure in chamber 2 and decrease the pressure in chamber 1. The robot will have positive local x-position coordinates.
+
+![Convention for pressure torques acting on the segment. `n` represents the x-axis and `e` the y-axis.](figures/torques_on_segment.png)
 
 ## Citations
 <a id="1">[1]</a> Della Santina, C., Bicchi, A., & Rus, D. (2019, November). Dynamic control of soft robots with internal constraints in the presence of obstacles. In 2019 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) (pp. 6622-6629). IEEE.
