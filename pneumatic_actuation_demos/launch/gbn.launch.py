@@ -35,6 +35,7 @@ def generate_launch_description():
                     "segment_trajectories": [SegmentTrajectoryType.GBN_X, SegmentTrajectoryType.GBN_X],
                     "trajectory_frequencies": [0.5, 0.5],
                     "vtem_status_topic": vtem_status_topic,
+                    "wait_for_vtem": use_vtem,
                 }
             ]
         )

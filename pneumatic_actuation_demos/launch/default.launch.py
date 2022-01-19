@@ -35,6 +35,7 @@ def generate_launch_description():
                     "segment_trajectories": [SegmentTrajectoryType.BENDING_1D_X],
                     "trajectory_frequencies": [0.1],
                     "vtem_status_topic": vtem_status_topic,
+                    "wait_for_vtem": use_vtem,
                 }
             ]
         )

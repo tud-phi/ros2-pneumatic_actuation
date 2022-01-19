@@ -33,8 +33,12 @@ class SegmentTrajectoryType(IntEnum):
     CHIRP_Y = 31
     # Generalized binary noise
     # https://www.sciencedirect.com/science/article/abs/pii/000510989090156C
+    # switches constantly with random timing between one positive and negative amplitude
     GBN_X = 34
     GBN_Y = 35
+    # Randomly samples the amplitude from a random distribution when switching the state
+    GBN_RAND_AMPLITUDE_X = 36
+    GBN_RAND_AMPLITUDE_Y = 37
 
 class PressureTrajectoryNode(Node):
 
@@ -123,11 +127,15 @@ class PressureTrajectoryNode(Node):
         self.chirp_rate = self.get_parameter('chirp_rate').value
 
         if SegmentTrajectoryType.GBN_X in self.segment_trajectories \
-            or SegmentTrajectoryType.GBN_Y in self.segment_trajectories:
+            or SegmentTrajectoryType.GBN_Y in self.segment_trajectories \
+            or SegmentTrajectoryType.GBN_RAND_AMPLITUDE_X in self.segment_trajectories \
+            or SegmentTrajectoryType.GBN_RAND_AMPLITUDE_Y in self.segment_trajectories:
             self.gbn_sequences = []
+            self.gbn_amplitudes = []
             for trajectory_period in self.trajectory_periods:
                 self.gbn_sequences.append(gbn(h=self.timer_period, T=1.1*self.experiment_duration, 
                                           A=1, ts=trajectory_period, flag=1))
+                self.gbn_amplitudes.append(0)
 
     def timer_callback(self):
         if self.state == ExperimentState.BOOT_UP:
@@ -171,6 +179,9 @@ class PressureTrajectoryNode(Node):
                     self.commanded_forces[segment_idx] = self.gbn_x_trajectory(segment_idx, trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.GBN_Y:
                     self.commanded_forces[segment_idx] = self.gbn_y_trajectory(segment_idx, trajectory_time, self.trajectory_periods[segment_idx], force_peak)
+                elif trajectory_type in [SegmentTrajectoryType.GBN_RAND_AMPLITUDE_X, SegmentTrajectoryType.GBN_RAND_AMPLITUDE_Y]:
+                    self.commanded_forces[segment_idx] = self.gbn_rand_amplitude_trajectory(segment_idx, trajectory_time, self.trajectory_periods[segment_idx], 
+                                                                                            force_peak, trajectory_type)
                 else:
                     raise NotImplementedError
 
@@ -296,6 +307,30 @@ class PressureTrajectoryNode(Node):
 
         f_x = 0
         f_y = gbn_value * force_peak
+
+        return np.array([f_x, f_y])
+
+    def gbn_rand_amplitude_trajectory(self, segment_idx: int, trajectory_time: float, 
+                                      trajectory_period: float, force_peak: float, trajectory_type: SegmentTrajectoryType) -> np.array:
+        gbn_sequence = self.gbn_sequences[segment_idx]
+
+        sample_amplitude = False
+        if self.state_counter > 0 and gbn_sequence[int(self.state_counter)] != gbn_sequence[int(self.state_counter)-1]:
+            sample_amplitude = True
+        else:
+            sample_amplitude = True 
+
+        if sample_amplitude:
+            self.gbn_amplitudes[segment_idx] = np.random.uniform(low=-force_peak, high=force_peak)
+
+        if trajectory_type == SegmentTrajectoryType.GBN_RAND_AMPLITUDE_X:
+            f_x = self.gbn_amplitudes[segment_idx]
+            f_y = 0.
+        elif trajectory_type == SegmentTrajectoryType.GBN_RAND_AMPLITUDE_Y:
+            f_x = 0.
+            f_y = self.gbn_amplitudes[segment_idx]
+        else:
+            raise ValueError
 
         return np.array([f_x, f_y])
 
