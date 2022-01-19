@@ -34,6 +34,7 @@ def generate_launch_description():
                     "pressure_offset": 125*100,
                     "radius_CoP": 0.1,
                     "segment_trajectories": [SegmentTrajectoryType.CHIRP_X, SegmentTrajectoryType.CHIRP_X],
+                    "seed": 0,
                     "trajectory_frequencies": [0.01, 0.01],
                     "vtem_status_topic": vtem_status_topic,
                     'wait_for_vtem': use_vtem

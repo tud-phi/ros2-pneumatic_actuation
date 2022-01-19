@@ -118,8 +118,10 @@ class PressureTrajectoryNode(Node):
         self.msg: FluidPressures = self.prep_fluid_pressures_msg()
 
         # random seed
-        self.seed = 0
-        np.random.seed(self.seed)
+        self.declare_parameter('seed', None)
+        self.seed = self.get_parameter('seed').value
+        if self.seed is not None:
+            np.random.seed(self.seed)
 
         # system identification signals parameters
         self.chirp_freq0 = 0. # [Hz] starting frequency of chirp
@@ -134,7 +136,7 @@ class PressureTrajectoryNode(Node):
             self.gbn_amplitudes = []
             for trajectory_period in self.trajectory_periods:
                 self.gbn_sequences.append(gbn(h=self.timer_period, T=1.1*self.experiment_duration, 
-                                          A=1, ts=trajectory_period, flag=1))
+                                          A=1, ts=trajectory_period, flag=1, seed=self.seed))
                 self.gbn_amplitudes.append(0)
 
     def timer_callback(self):
