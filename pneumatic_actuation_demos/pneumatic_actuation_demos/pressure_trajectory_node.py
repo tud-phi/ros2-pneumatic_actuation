@@ -22,23 +22,19 @@ class SegmentTrajectoryType(IntEnum):
     """
     Enum class for the trajectory type of an individual segment.
     """
-    BENDING_1D_X = 0
-    BENDING_1D_Y = 1
+    BENDING_1D = 0
     CIRCLE = 10
     HALF_8_SHAPE = 20
     FULL_8_SHAPE = 21
     # System identification signals
     # Chirp: https://en.wikipedia.org/wiki/Sine_wave
-    CHIRP_X = 30
-    CHIRP_Y = 31
+    CHIRP = 30
     # Generalized binary noise
     # https://www.sciencedirect.com/science/article/abs/pii/000510989090156C
     # switches constantly with random timing between one positive and negative amplitude
-    GBN_X = 34
-    GBN_Y = 35
+    GBN = 34
     # Randomly samples the amplitude from a random distribution when switching the state
-    GBN_RAND_AMPLITUDE_X = 36
-    GBN_RAND_AMPLITUDE_Y = 37
+    GBN_RAND_AMPLITUDE = 36
 
 class PressureTrajectoryNode(Node):
 
@@ -90,7 +86,7 @@ class PressureTrajectoryNode(Node):
         self.declare_parameter('deflate_time', 5)
         self.deflate_time = self.get_parameter('deflate_time').value
 
-        self.declare_parameter('segment_trajectories', [SegmentTrajectoryType.BENDING_1D_X for i in range(self.num_segments)])
+        self.declare_parameter('segment_trajectories', [SegmentTrajectoryType.BENDING_1D for i in range(self.num_segments)])
         self.segment_trajectories = self.get_parameter('segment_trajectories').value
         assert len(self.segment_trajectories) == self.num_segments
 
@@ -102,6 +98,10 @@ class PressureTrajectoryNode(Node):
         self.declare_parameter('pressure_peaks', [1500 for i in range(self.num_segments)]) # [N]
         self.pressure_peaks = self.get_parameter('pressure_peaks').value # [N]
         assert len(self.pressure_peaks) == self.num_segments
+
+        self.declare_parameter('torque_angles', [0.0 for i in range(self.num_segments)]) # [rad]
+        self.torque_angles = self.get_parameter('torque_angles').value # [rad]
+        assert len(self.torque_angles) == self.num_segments
 
         self.declare_parameter('node_frequency', 10)
         self.node_frequency = self.get_parameter('node_frequency').value # [Hz]
@@ -128,10 +128,8 @@ class PressureTrajectoryNode(Node):
         self.declare_parameter('chirp_rate', 0.01) # [Hz/s] chirp rate
         self.chirp_rate = self.get_parameter('chirp_rate').value
 
-        if SegmentTrajectoryType.GBN_X in self.segment_trajectories \
-            or SegmentTrajectoryType.GBN_Y in self.segment_trajectories \
-            or SegmentTrajectoryType.GBN_RAND_AMPLITUDE_X in self.segment_trajectories \
-            or SegmentTrajectoryType.GBN_RAND_AMPLITUDE_Y in self.segment_trajectories:
+        if SegmentTrajectoryType.GBN in self.segment_trajectories \
+            or SegmentTrajectoryType.GBN_RAND_AMPLITUDE in self.segment_trajectories:
             self.gbn_sequences = []
             self.gbn_amplitudes = []
             for trajectory_period in self.trajectory_periods:
@@ -164,26 +162,20 @@ class PressureTrajectoryNode(Node):
                 trajectory_counter = self.state_counter - int(num_completed_periods * self.trajectory_periods[segment_idx] / self.timer_period)
                 force_peak = self.pressure_peaks[segment_idx] / np.max(self.A_p)
 
-                if trajectory_type == SegmentTrajectoryType.BENDING_1D_X:
-                    self.commanded_forces[segment_idx] = self.bending_1d_x_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
-                elif trajectory_type == SegmentTrajectoryType.BENDING_1D_Y:
-                    self.commanded_forces[segment_idx] = self.bending_1d_y_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
+                if trajectory_type == SegmentTrajectoryType.BENDING_1D:
+                    self.commanded_forces[segment_idx] = self.bending_1d_trajectory(segment_idx, trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.CIRCLE:
                     self.commanded_forces[segment_idx] = self.circle_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.HALF_8_SHAPE:
                     self.commanded_forces[segment_idx] = self.half_8_shape_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.FULL_8_SHAPE:
                     self.commanded_forces[segment_idx] = self.full_8_shape_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
-                elif trajectory_type == SegmentTrajectoryType.CHIRP_X:
-                    self.commanded_forces[segment_idx] = self.chirp_x_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
-                elif trajectory_type == SegmentTrajectoryType.CHIRP_Y:
-                    self.commanded_forces[segment_idx] = self.chirp_y_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
-                elif trajectory_type == SegmentTrajectoryType.GBN_X:
-                    self.commanded_forces[segment_idx] = self.gbn_x_trajectory(segment_idx, trajectory_counter, force_peak)
-                elif trajectory_type == SegmentTrajectoryType.GBN_Y:
-                    self.commanded_forces[segment_idx] = self.gbn_y_trajectory(segment_idx, trajectory_counter, force_peak)
-                elif trajectory_type in [SegmentTrajectoryType.GBN_RAND_AMPLITUDE_X, SegmentTrajectoryType.GBN_RAND_AMPLITUDE_Y]:
-                    self.commanded_forces[segment_idx] = self.gbn_rand_amplitude_trajectory(segment_idx, trajectory_counter, force_peak, trajectory_type)
+                elif trajectory_type == SegmentTrajectoryType.CHIRP:
+                    self.commanded_forces[segment_idx] = self.chirp_trajectory(segment_idx, trajectory_time, force_peak)
+                elif trajectory_type == SegmentTrajectoryType.GBN:
+                    self.commanded_forces[segment_idx] = self.gbn_trajectory(segment_idx, trajectory_counter, force_peak)
+                elif trajectory_type == SegmentTrajectoryType.GBN_RAND_AMPLITUDE:
+                    self.commanded_forces[segment_idx] = self.gbn_rand_amplitude_trajectory(segment_idx, trajectory_counter, force_peak)
                 else:
                     raise NotImplementedError
 
@@ -221,25 +213,15 @@ class PressureTrajectoryNode(Node):
     def vtem_status_callback(self, msg):
         self.vtem_status = msg.data
 
-    def bending_1d_x_trajectory(self, trajectory_time: float, trajectory_period: float, 
+    def bending_1d_trajectory(self, segment_idx: int, trajectory_time: float, trajectory_period: float, 
                                 force_peak: float) -> np.array:
         if trajectory_time < 0.5*trajectory_period:
-            f_x = force_peak * trajectory_time / (0.5*trajectory_period)
+            f = force_peak * trajectory_time / (0.5*trajectory_period)
         else:
-            f_x = force_peak * (2-trajectory_time / (0.5*trajectory_period))
+            f = force_peak * (2-trajectory_time / (0.5*trajectory_period))
 
-        f_y = 0
-
-        return np.array([f_x, f_y])
-
-    def bending_1d_y_trajectory(self, trajectory_time: float, trajectory_period: float, 
-                                force_peak: float) -> np.array:
-        f_x = 0
-
-        if trajectory_time < 0.5*trajectory_period:
-            f_y = force_peak * trajectory_time / (0.5*trajectory_period)
-        else:
-            f_y = force_peak * (2-trajectory_time / (0.5*trajectory_period))
+        f_x = np.cos(self.torque_angles[segment_idx])*f
+        f_y = np.sin(self.torque_angles[segment_idx])*f
 
         return np.array([f_x, f_y])
 
@@ -270,50 +252,31 @@ class PressureTrajectoryNode(Node):
 
         return np.array([f_x, f_y])
 
-    def chirp_x_trajectory(self, trajectory_time: float, trajectory_period: float, 
-                           force_peak: float) -> np.array:
+    def chirp_trajectory(self, segment_idx: int, trajectory_time: float, force_peak: float) -> np.array:
         freq = self.chirp_freq0 + self.chirp_rate * trajectory_time
 
-        f_x = force_peak * np.sin(2 * np.pi * freq * trajectory_time)
-        f_y = 0
+        f = force_peak * np.sin(2 * np.pi * freq * trajectory_time)
+
+        f_x = np.cos(self.torque_angles[segment_idx])*f
+        f_y = np.sin(self.torque_angles[segment_idx])*f
 
         return np.array([f_x, f_y])
 
-    def chirp_y_trajectory(self, trajectory_time: float, trajectory_period: float, 
-                           force_peak: float) -> np.array:
-        freq = self.chirp_freq0 + self.chirp_rate * trajectory_time
-
-        f_x = 0
-        f_y = force_peak * np.sin(2 * np.pi * freq * trajectory_time)
-
-        return np.array([f_x, f_y])
-
-    def gbn_x_trajectory(self, segment_idx: int, trajectory_counter: int, 
-                         force_peak: float) -> np.array:
+    def gbn_trajectory(self, segment_idx: int, trajectory_counter: int, force_peak: float) -> np.array:
         gbn_value = self.gbn_sequences[segment_idx][int(trajectory_counter)]
 
         # we need to correct dbn value so that it is in range 0 to 1
         # gbn_value = (gbn_value + 1) / 2
 
-        f_x = gbn_value * force_peak
-        f_y = 0
+        f = gbn_value * force_peak
 
-        return np.array([f_x, f_y])
-
-    def gbn_y_trajectory(self, segment_idx: int, trajectory_counter: int, 
-                         force_peak: float) -> np.array:
-        gbn_value = self.gbn_sequences[segment_idx][int(trajectory_counter)]
-
-        # we need to correct dbn value so that it is in range 0 to 1
-        # gbn_value = (gbn_value + 1) / 2
-
-        f_x = 0
-        f_y = gbn_value * force_peak
+        f_x = np.cos(self.torque_angles[segment_idx])*f
+        f_y = np.sin(self.torque_angles[segment_idx])*f
 
         return np.array([f_x, f_y])
 
     def gbn_rand_amplitude_trajectory(self, segment_idx: int, trajectory_counter: int, 
-                                      force_peak: float, trajectory_type: SegmentTrajectoryType) -> np.array:
+                                      force_peak: float) -> np.array:
         gbn_sequence = self.gbn_sequences[segment_idx]
 
         sample_amplitude = False
@@ -325,14 +288,12 @@ class PressureTrajectoryNode(Node):
         if sample_amplitude:
             self.gbn_amplitudes[segment_idx] = np.random.uniform(low=-force_peak, high=force_peak)
 
-        if trajectory_type == SegmentTrajectoryType.GBN_RAND_AMPLITUDE_X:
-            f_x = self.gbn_amplitudes[segment_idx]
-            f_y = 0.
-        elif trajectory_type == SegmentTrajectoryType.GBN_RAND_AMPLITUDE_Y:
-            f_x = 0.
-            f_y = self.gbn_amplitudes[segment_idx]
-        else:
-            raise ValueError
+        f = self.gbn_amplitudes[segment_idx]
+
+        f_x = np.cos(self.torque_angles[segment_idx])*f
+        f_y = np.sin(self.torque_angles[segment_idx])*f
+
+        return np.array([f_x, f_y])
 
         return np.array([f_x, f_y])
 
