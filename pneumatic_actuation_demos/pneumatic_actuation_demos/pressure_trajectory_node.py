@@ -118,10 +118,9 @@ class PressureTrajectoryNode(Node):
         self.msg: FluidPressures = self.prep_fluid_pressures_msg()
 
         # random seed
-        self.declare_parameter('seed', None)
+        self.declare_parameter('seed', 101)
         self.seed = self.get_parameter('seed').value
-        if self.seed is not None:
-            np.random.seed(self.seed)
+        np.random.seed(self.seed)
 
         # system identification signals parameters
         self.chirp_freq0 = 0. # [Hz] starting frequency of chirp
