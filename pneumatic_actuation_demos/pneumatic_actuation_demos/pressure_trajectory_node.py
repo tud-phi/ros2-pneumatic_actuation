@@ -161,6 +161,7 @@ class PressureTrajectoryNode(Node):
                 trajectory_type = self.segment_trajectories[segment_idx]
                 num_completed_periods = self.state_counter * self.timer_period // self.trajectory_periods[segment_idx]
                 trajectory_time = self.state_counter * self.timer_period - num_completed_periods*self.trajectory_periods[segment_idx]
+                trajectory_counter = self.state_counter - int(num_completed_periods * self.trajectory_periods[segment_idx] / self.timer_period)
                 force_peak = self.pressure_peaks[segment_idx] / np.max(self.A_p)
 
                 if trajectory_type == SegmentTrajectoryType.BENDING_1D_X:
@@ -178,12 +179,11 @@ class PressureTrajectoryNode(Node):
                 elif trajectory_type == SegmentTrajectoryType.CHIRP_Y:
                     self.commanded_forces[segment_idx] = self.chirp_y_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.GBN_X:
-                    self.commanded_forces[segment_idx] = self.gbn_x_trajectory(segment_idx, trajectory_time, self.trajectory_periods[segment_idx], force_peak)
+                    self.commanded_forces[segment_idx] = self.gbn_x_trajectory(segment_idx, trajectory_counter, force_peak)
                 elif trajectory_type == SegmentTrajectoryType.GBN_Y:
-                    self.commanded_forces[segment_idx] = self.gbn_y_trajectory(segment_idx, trajectory_time, self.trajectory_periods[segment_idx], force_peak)
+                    self.commanded_forces[segment_idx] = self.gbn_y_trajectory(segment_idx, trajectory_counter, force_peak)
                 elif trajectory_type in [SegmentTrajectoryType.GBN_RAND_AMPLITUDE_X, SegmentTrajectoryType.GBN_RAND_AMPLITUDE_Y]:
-                    self.commanded_forces[segment_idx] = self.gbn_rand_amplitude_trajectory(segment_idx, trajectory_time, self.trajectory_periods[segment_idx], 
-                                                                                            force_peak, trajectory_type)
+                    self.commanded_forces[segment_idx] = self.gbn_rand_amplitude_trajectory(segment_idx, trajectory_counter, force_peak, trajectory_type)
                 else:
                     raise NotImplementedError
 
@@ -288,9 +288,9 @@ class PressureTrajectoryNode(Node):
 
         return np.array([f_x, f_y])
 
-    def gbn_x_trajectory(self, segment_idx: int, trajectory_time: float, 
-                         trajectory_period: float, force_peak: float) -> np.array:
-        gbn_value = self.gbn_sequences[segment_idx][int(self.state_counter)]
+    def gbn_x_trajectory(self, segment_idx: int, trajectory_counter: int, 
+                         force_peak: float) -> np.array:
+        gbn_value = self.gbn_sequences[segment_idx][int(trajectory_counter)]
 
         # we need to correct dbn value so that it is in range 0 to 1
         # gbn_value = (gbn_value + 1) / 2
@@ -300,9 +300,9 @@ class PressureTrajectoryNode(Node):
 
         return np.array([f_x, f_y])
 
-    def gbn_y_trajectory(self, segment_idx: int, trajectory_time: float, 
-                         trajectory_period: float, force_peak: float) -> np.array:
-        gbn_value = self.gbn_sequences[segment_idx][int(self.state_counter)]
+    def gbn_y_trajectory(self, segment_idx: int, trajectory_counter: int, 
+                         force_peak: float) -> np.array:
+        gbn_value = self.gbn_sequences[segment_idx][int(trajectory_counter)]
 
         # we need to correct dbn value so that it is in range 0 to 1
         # gbn_value = (gbn_value + 1) / 2
@@ -312,12 +312,12 @@ class PressureTrajectoryNode(Node):
 
         return np.array([f_x, f_y])
 
-    def gbn_rand_amplitude_trajectory(self, segment_idx: int, trajectory_time: float, 
-                                      trajectory_period: float, force_peak: float, trajectory_type: SegmentTrajectoryType) -> np.array:
+    def gbn_rand_amplitude_trajectory(self, segment_idx: int, trajectory_counter: int, 
+                                      force_peak: float, trajectory_type: SegmentTrajectoryType) -> np.array:
         gbn_sequence = self.gbn_sequences[segment_idx]
 
         sample_amplitude = False
-        if self.state_counter > 0 and gbn_sequence[int(self.state_counter)] != gbn_sequence[int(self.state_counter)-1]:
+        if trajectory_counter > 0 and gbn_sequence[int(trajectory_counter)] != gbn_sequence[int(trajectory_counter)-1]:
             sample_amplitude = True
         else:
             sample_amplitude = True 
