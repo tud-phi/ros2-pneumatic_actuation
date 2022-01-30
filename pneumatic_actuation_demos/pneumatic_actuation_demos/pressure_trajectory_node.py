@@ -35,6 +35,8 @@ class SegmentTrajectoryType(IntEnum):
     GBN = 34
     # Randomly samples the amplitude from a random distribution when switching the state
     GBN_RAND_AMPLITUDE = 36
+    # Staircase: sequence of step responses to higher amplitudes
+    STAIRCASE = 38
 
 class PressureTrajectoryNode(Node):
 
@@ -136,6 +138,36 @@ class PressureTrajectoryNode(Node):
                                           A=1, ts=trajectory_period, flag=1, seed=self.seed))
                 self.gbn_amplitudes.append(0)
 
+        if SegmentTrajectoryType.STAIRCASE in self.segment_trajectories:
+            self.declare_parameter('step_periods', [10. for i in range(self.num_segments)]) # [s]
+            self.step_periods = self.get_parameter('step_periods').value # [s]
+            assert len(self.step_periods) == self.num_segments
+        
+            self.staircase_sequences = []
+            for step_period, trajectory_period in zip(self.step_periods, self.trajectory_periods):
+                assert step_period <= trajectory_period
+                num_steps = trajectory_period // (2*step_period)
+                step_amplitude = 1 / num_steps
+
+                timestep_sequence = np.arange(start=0, stop=trajectory_period, step=self.timer_period)
+                condlist = []
+                valuelist = []
+                time = 0.
+                amplitude = 0.
+                while time < trajectory_period:
+                    condlist.append((time <= timestep_sequence) * (timestep_sequence < (time + step_period)))
+
+                    if time < (trajectory_period // 2) and amplitude < 1.:
+                        amplitude += step_amplitude
+                    else:
+                        amplitude -= step_amplitude
+                    valuelist.append(step_amplitude)
+
+                    time += step_period
+
+                sequence = np.piecewise(timestep_sequence, condlist, valuelist)
+                self.staircase_sequences.append(sequence)
+
     def timer_callback(self):
         if self.state == ExperimentState.BOOT_UP:
             if self.vtem_status == True or self.wait_for_vtem == False:
@@ -175,6 +207,8 @@ class PressureTrajectoryNode(Node):
                     self.commanded_forces[segment_idx] = self.gbn_trajectory(segment_idx, trajectory_counter, force_peak)
                 elif trajectory_type == SegmentTrajectoryType.GBN_RAND_AMPLITUDE:
                     self.commanded_forces[segment_idx] = self.gbn_rand_amplitude_trajectory(segment_idx, trajectory_counter, force_peak)
+                elif trajectory_type == SegmentTrajectoryType.STAIRCASE:
+                    self.commanded_forces[segment_idx] = self.staircase_trajectory(segment_idx, trajectory_counter, force_peak)
                 else:
                     raise NotImplementedError
 
@@ -274,8 +308,7 @@ class PressureTrajectoryNode(Node):
 
         return np.array([f_x, f_y])
 
-    def gbn_rand_amplitude_trajectory(self, segment_idx: int, trajectory_counter: int, 
-                                      force_peak: float) -> np.array:
+    def gbn_rand_amplitude_trajectory(self, segment_idx: int, trajectory_counter: int, force_peak: float) -> np.array:
         gbn_sequence = self.gbn_sequences[segment_idx]
 
         sample_amplitude = False
@@ -293,6 +326,13 @@ class PressureTrajectoryNode(Node):
         f_y = np.sin(self.torque_angles[segment_idx])*f
 
         return np.array([f_x, f_y])
+
+    def staircase_trajectory(self, segment_idx: int, trajectory_counter: int, force_peak: float) -> np.array:
+
+        f = self.staircase_sequences[segment_idx][trajectory_counter]
+
+        f_x = np.cos(self.torque_angles[segment_idx])*f
+        f_y = np.sin(self.torque_angles[segment_idx])*f
 
         return np.array([f_x, f_y])
 
