@@ -28,7 +28,7 @@ def generate_launch_description():
                     "experiment_duration": 60,
                     "pressure_peaks": [75*100, 100*100],
                     "inflate_time": 5,
-                    "node_frequency": 100,
+                    "node_frequency": 100.,
                     "num_chambers": num_chambers,
                     "num_segments": num_segments,
                     "pressure_offset": 125*100,

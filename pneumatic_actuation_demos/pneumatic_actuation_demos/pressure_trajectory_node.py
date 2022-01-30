@@ -103,7 +103,7 @@ class PressureTrajectoryNode(Node):
         self.torque_angles = self.get_parameter('torque_angles').value # [rad]
         assert len(self.torque_angles) == self.num_segments
 
-        self.declare_parameter('node_frequency', 10)
+        self.declare_parameter('node_frequency', 10.)
         self.node_frequency = self.get_parameter('node_frequency').value # [Hz]
         self.timer_period = 1 / self.node_frequency  # seconds
         self.timer = self.create_timer(self.timer_period, self.timer_callback)
