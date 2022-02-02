@@ -315,7 +315,7 @@ class PressureTrajectoryNode(Node):
         if trajectory_counter > 0 and gbn_sequence[int(trajectory_counter)] != gbn_sequence[int(trajectory_counter)-1]:
             sample_amplitude = True
         else:
-            sample_amplitude = True 
+            sample_amplitude = False 
 
         if sample_amplitude:
             self.gbn_amplitudes[segment_idx] = np.random.uniform(low=-force_peak, high=force_peak)
