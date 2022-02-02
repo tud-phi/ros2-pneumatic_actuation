@@ -10,7 +10,7 @@ def generate_launch_description():
     commanded_pressures_topic = "/pneumatic_actuation/commanded_pressures"
     measured_pressures_topic = "/pneumatic_actuation/measured_pressures"
 
-    use_vtem = True
+    node_frequency = 100.
     vtem_status_topic = "/vtem_control/vtem_status"
     common_vtem_params = {"num_valves": num_segments*num_chambers, "modbus_node": "192.168.4.3", "modbus_service": "502"}
 
@@ -27,7 +27,7 @@ def generate_launch_description():
                     "experiment_duration": 120,
                     "pressure_peaks": [45*100, 100*100],
                     "inflate_time": 5,
-                    "node_frequency": 100.,
+                    "node_frequency": node_frequency,
                     "num_chambers": num_chambers,
                     "num_segments": num_segments,
                     "pressure_offset": 125*100,
@@ -60,7 +60,7 @@ def generate_launch_description():
                 executable='output_pressures_pub_node',
                 parameters=[
                     common_vtem_params,
-                    {"output_pressures_topic": "output_pressures", "pub_freq": 100., "vtem_status_topic": vtem_status_topic}
+                    {"output_pressures_topic": "output_pressures", "pub_freq": node_frequency, "vtem_status_topic": vtem_status_topic}
                 ]
             ),
             Node(
