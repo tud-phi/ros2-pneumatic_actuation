@@ -10,6 +10,7 @@ def generate_launch_description():
     commanded_pressures_topic = "/pneumatic_actuation/commanded_pressures"
     measured_pressures_topic = "/pneumatic_actuation/measured_pressures"
 
+    use_vtem = True
     node_frequency = 100.
     vtem_status_topic = "/vtem_control/vtem_status"
     common_vtem_params = {"num_valves": num_segments*num_chambers, "modbus_node": "192.168.4.3", "modbus_service": "502"}
