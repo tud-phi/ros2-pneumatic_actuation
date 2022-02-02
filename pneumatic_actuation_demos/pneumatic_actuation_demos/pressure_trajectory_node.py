@@ -32,9 +32,10 @@ class SegmentTrajectoryType(IntEnum):
     # Generalized binary noise
     # https://www.sciencedirect.com/science/article/abs/pii/000510989090156C
     # switches constantly with random timing between one positive and negative amplitude
-    GBN = 34
+    GBN = 32
     # Randomly samples the amplitude from a random distribution when switching the state
-    GBN_RAND_AMPLITUDE = 36
+    GBN_RAND_AMPLITUDE = 34
+    GBN_RAND_AMPLITUDE_RAND_ANGLE = 36
     # Staircase: sequence of step responses to higher amplitudes
     STAIRCASE = 38
 
@@ -130,7 +131,8 @@ class PressureTrajectoryNode(Node):
         self.chirp_rate = self.get_parameter('chirp_rate').value
 
         if SegmentTrajectoryType.GBN in self.segment_trajectories \
-            or SegmentTrajectoryType.GBN_RAND_AMPLITUDE in self.segment_trajectories:
+            or SegmentTrajectoryType.GBN_RAND_AMPLITUDE in self.segment_trajectories \
+                or SegmentTrajectoryType.GBN_RAND_AMPLITUDE_RAND_ANGLE in self.segment_trajectories:
             self.gbn_sequences = []
             self.gbn_amplitudes = []
             for trajectory_period in self.trajectory_periods:
@@ -205,8 +207,11 @@ class PressureTrajectoryNode(Node):
                     self.commanded_forces[segment_idx] = self.chirp_trajectory(segment_idx, trajectory_time, force_peak)
                 elif trajectory_type == SegmentTrajectoryType.GBN:
                     self.commanded_forces[segment_idx] = self.gbn_trajectory(segment_idx, trajectory_counter, force_peak)
-                elif trajectory_type == SegmentTrajectoryType.GBN_RAND_AMPLITUDE:
-                    self.commanded_forces[segment_idx] = self.gbn_rand_amplitude_trajectory(segment_idx, trajectory_counter, force_peak)
+                elif trajectory_type in [SegmentTrajectoryType.GBN_RAND_AMPLITUDE, SegmentTrajectoryType.GBN_RAND_AMPLITUDE_RAND_ANGLE]:
+                    rand_angle = False
+                    if trajectory_type == SegmentTrajectoryType.GBN_RAND_AMPLITUDE_RAND_ANGLE:
+                        rand_angle = True
+                    self.commanded_forces[segment_idx] = self.gbn_rand_trajectory(segment_idx, trajectory_counter, force_peak, rand_angle)
                 elif trajectory_type == SegmentTrajectoryType.STAIRCASE:
                     self.commanded_forces[segment_idx] = self.staircase_trajectory(segment_idx, trajectory_counter, force_peak)
                 else:
@@ -308,7 +313,7 @@ class PressureTrajectoryNode(Node):
 
         return np.array([f_x, f_y])
 
-    def gbn_rand_amplitude_trajectory(self, segment_idx: int, trajectory_counter: int, force_peak: float) -> np.array:
+    def gbn_rand_trajectory(self, segment_idx: int, trajectory_counter: int, force_peak: float, random_torque_angle: False) -> np.array:
         gbn_sequence = self.gbn_sequences[segment_idx]
 
         sample_amplitude = False
@@ -318,7 +323,12 @@ class PressureTrajectoryNode(Node):
             sample_amplitude = False 
 
         if sample_amplitude:
-            self.gbn_amplitudes[segment_idx] = np.random.uniform(low=-force_peak, high=force_peak)
+            if random_torque_angle:
+                self.torque_angles[segment_idx] = np.random.uniform(low=0, high=2*np.pi)
+                self.gbn_amplitudes[segment_idx] = np.random.uniform(low=0, high=force_peak)
+            else:
+                self.torque_angles[segment_idx] = self.torque_angles[segment_idx]
+                self.gbn_amplitudes[segment_idx] = np.random.uniform(low=-force_peak, high=force_peak)
 
         f = self.gbn_amplitudes[segment_idx]
 
