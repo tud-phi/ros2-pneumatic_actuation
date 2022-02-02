@@ -163,7 +163,7 @@ class PressureTrajectoryNode(Node):
                         amplitude += step_amplitude
                     else:
                         amplitude -= step_amplitude
-                    valuelist.append(step_amplitude)
+                    valuelist.append(amplitude)
 
                     time += step_period
 
@@ -338,8 +338,7 @@ class PressureTrajectoryNode(Node):
         return np.array([f_x, f_y])
 
     def staircase_trajectory(self, segment_idx: int, trajectory_counter: int, force_peak: float) -> np.array:
-
-        f = self.staircase_sequences[segment_idx][trajectory_counter]
+        f = self.staircase_sequences[segment_idx][trajectory_counter] * force_peak
 
         f_x = np.cos(self.torque_angles[segment_idx])*f
         f_y = np.sin(self.torque_angles[segment_idx])*f
