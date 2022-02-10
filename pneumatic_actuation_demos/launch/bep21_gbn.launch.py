@@ -6,8 +6,8 @@ import os
 from pneumatic_actuation_demos.pressure_trajectory_node import SegmentTrajectoryType
 
 def generate_launch_description():
-    num_segments = 2
-    num_chambers = 4
+    num_segments = 1
+    num_chambers = 3
 
     commanded_pressures_topic = "/pneumatic_actuation/commanded_pressures"
     measured_pressures_topic = "/pneumatic_actuation/measured_pressures"
