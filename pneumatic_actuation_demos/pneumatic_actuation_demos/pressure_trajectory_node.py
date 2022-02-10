@@ -34,8 +34,7 @@ class SegmentTrajectoryType(IntEnum):
     # switches constantly with random timing between one positive and negative amplitude
     GBN = 32
     # Randomly samples the amplitude from a random distribution when switching the state
-    GBN_RAND_AMPLITUDE = 34
-    GBN_RAND_AMPLITUDE_RAND_ANGLE = 36
+    GBN_RAND = 34
     # Staircase: sequence of step responses to higher amplitudes
     STAIRCASE = 38
 
@@ -69,16 +68,20 @@ class PressureTrajectoryNode(Node):
         self.sub_vtem_status = self.create_subscription(Bool, vtem_status_topic, self.vtem_status_callback, 10)
         self.vtem_status = False
 
-        self.declare_parameter('pressure_offset', 150*100) # pressure in all chambers in straight configuration [Pa]
-        self.pressure_offset = self.get_parameter('pressure_offset').value
-
         self.declare_parameter('radius_CoP', 0.1) # radius from center-line of segment to the center of pressure of each chamber
-        self.radius_CoP = self.get_parameter('radius_CoP').value
+        self.r_p = self.get_parameter('radius_CoP').value
 
+        # modelled area of chamber in [m^2] for transforming tau_xyz to pressures
+        self.chamber_area = 1.
         if self.num_chambers == 4:
-            self.A_p = 1 / self.radius_CoP * np.array([[0, -1/2], [0, 1/2], [1/2, 0], [-1/2, 0],])
+            self.A_p = 1 / self.chamber_area * np.array([[0, -1/(2*self.r_p), 1/4], 
+                                                         [0, 1/(2*self.r_p), 1/4], 
+                                                         [1/(2*self.r_p), 0, 1/4], 
+                                                         [-1/(2*self.r_p), 0, 1/4]])
         elif self.num_chambers == 3:
-            self.A_p = 1 / self.radius_CoP * np.array([[0, 2/3], [-1/np.sqrt(3), -1/3], [1/np.sqrt(3), -1/3]])
+            self.A_p = 1 / self.chamber_area * np.array([[0, 2/(3*self.r_p), 1/3], 
+                                                         [-1/(np.sqrt(3)*self.r_p), -1/(3*self.r_p), 1/3], 
+                                                         [1/(np.sqrt(3)*self.r_p), -1/(3*self.r_p), 1/3]])
         else:
             raise NotImplementedError
 
@@ -98,13 +101,42 @@ class PressureTrajectoryNode(Node):
         assert len(self.trajectory_frequencies) == self.num_segments
         self.trajectory_periods = [1/x for x in self.trajectory_frequencies]
 
+        self.declare_parameter('random_torque_amplitudes', [False for i in range(self.num_segments)])
+        self.random_torque_amplitudes = self.get_parameter('random_torque_amplitudes').value
+        assert len(self.random_torque_amplitudes) == self.num_segments
         self.declare_parameter('pressure_peaks', [1500 for i in range(self.num_segments)]) # [N]
         self.pressure_peaks = self.get_parameter('pressure_peaks').value # [N]
         assert len(self.pressure_peaks) == self.num_segments
+        self.torque_amplitudes = []
+        for i in range(self.num_segments):
+            if self.random_torque_amplitudes[i]:
+                self.torque_amplitudes.append(np.random.uniform(0, self.pressure_peaks[i] / self.A_p.max()))
+            else:
+                self.torque_amplitudes.append(self.pressure_peaks[i] / self.A_p.max())
 
-        self.declare_parameter('torque_angles', [0.0 for i in range(self.num_segments)]) # [rad]
-        self.torque_angles = self.get_parameter('torque_angles').value # [rad]
-        assert len(self.torque_angles) == self.num_segments
+        self.declare_parameter('random_torque_azimuths', [False for i in range(self.num_segments)])
+        self.random_torque_azimuths = self.get_parameter('random_torque_azimuths').value # [rad]
+        assert len(self.random_torque_azimuths) == self.num_segments
+        self.declare_parameter('torque_azimuths', [0.0 for i in range(self.num_segments)]) # [rad]
+        self.torque_azimuths = self.get_parameter('torque_azimuths').value # [rad]
+        assert len(self.torque_azimuths) == self.num_segments
+        for i in range(self.num_segments):
+            if self.random_torque_azimuths[i]:
+                self.torque_azimuths[i] = np.random.uniform(-np.pi, np.pi)
+
+        self.declare_parameter('random_extension_forces', [False for i in range(self.num_segments)])
+        self.random_extension_forces = self.get_parameter('random_extension_forces').value # [rad]
+        assert len(self.random_extension_forces) == self.num_segments
+        self.declare_parameter('pressure_offsets', [150*100 for i in range(self.num_segments)]) # pressure in all chambers in straight configuration [Pa]
+        self.pressure_offsets = self.get_parameter('pressure_offsets').value
+        assert len(self.pressure_offsets) == self.num_segments
+        self.extension_forces = []
+        for i in range(self.num_segments):
+            if self.random_extension_forces[i]:
+                self.extension_forces.append(np.random.uniform(low=(self.pressure_offsets[i]-self.pressure_peaks[i])*self.num_chambers, 
+                                                               high=self.pressure_offsets[i] * self.num_chambers))
+            else:
+                self.extension_forces.append(self.pressure_offsets[i] * self.num_chambers)
 
         self.declare_parameter('node_frequency', 10.)
         self.node_frequency = self.get_parameter('node_frequency').value # [Hz]
@@ -131,14 +163,13 @@ class PressureTrajectoryNode(Node):
         self.chirp_rate = self.get_parameter('chirp_rate').value
 
         if SegmentTrajectoryType.GBN in self.segment_trajectories \
-            or SegmentTrajectoryType.GBN_RAND_AMPLITUDE in self.segment_trajectories \
-                or SegmentTrajectoryType.GBN_RAND_AMPLITUDE_RAND_ANGLE in self.segment_trajectories:
+            or SegmentTrajectoryType.GBN_RAND in self.segment_trajectories:
             self.gbn_sequences = []
-            self.gbn_amplitudes = []
-            for trajectory_period in self.trajectory_periods:
+            self.gbn_tau_xzy_memory = []
+            for i, trajectory_period in enumerate(self.trajectory_periods):
                 self.gbn_sequences.append(gbn(h=self.timer_period, T=1.1*self.experiment_duration, 
-                                          A=1, ts=trajectory_period, flag=1, seed=self.seed))
-                self.gbn_amplitudes.append(0)
+                                          A=1, ts=trajectory_period, flag=1, seed=self.seed+i))
+                self.gbn_tau_xzy_memory.append(np.zeros(3))
 
         if SegmentTrajectoryType.STAIRCASE in self.segment_trajectories:
             self.declare_parameter('step_periods', [10. for i in range(self.num_segments)]) # [s]
@@ -171,6 +202,7 @@ class PressureTrajectoryNode(Node):
                 self.staircase_sequences.append(sequence)
 
     def timer_callback(self):
+        self.commanded_tau_xyz = np.zeros(shape=(self.num_segments, 3))
         if self.state == ExperimentState.BOOT_UP:
             if self.vtem_status == True or self.wait_for_vtem == False:
                 self.state = ExperimentState.INFLATE
@@ -178,7 +210,11 @@ class PressureTrajectoryNode(Node):
             else:
                 self.state_counter += 1
         elif self.state == ExperimentState.INFLATE:
-            self.commanded_pressures = (self.state_counter+1)*self.timer_period/self.inflate_time*np.ones_like(self.commanded_pressures)*self.pressure_offset
+            inflation_ratio = (self.state_counter+1)*self.timer_period/self.inflate_time
+            for segment_idx in range(self.num_segments):
+                self.commanded_tau_xyz[segment_idx] = inflation_ratio*np.array([0, 0, self.extension_forces[segment_idx]])
+
+            self.commanded_pressures = self.tau_xyz_to_pressures(self.commanded_tau_xyz)
 
             if self.state_counter*self.timer_period >= self.inflate_time:
                 self.state = ExperimentState.RUNNING
@@ -186,8 +222,6 @@ class PressureTrajectoryNode(Node):
             else:
                 self.state_counter += 1
         elif self.state == ExperimentState.RUNNING:
-            
-            self.commanded_forces = np.zeros(shape=(self.num_segments, 2))
             for segment_idx in range(self.num_segments):
                 trajectory_type = self.segment_trajectories[segment_idx]
                 num_completed_periods = self.state_counter * self.timer_period // self.trajectory_periods[segment_idx]
@@ -196,28 +230,35 @@ class PressureTrajectoryNode(Node):
                 force_peak = self.pressure_peaks[segment_idx] / np.max(self.A_p)
 
                 if trajectory_type == SegmentTrajectoryType.BENDING_1D:
-                    self.commanded_forces[segment_idx] = self.bending_1d_trajectory(segment_idx, trajectory_time, self.trajectory_periods[segment_idx], force_peak)
+                    commanded_tau_xyz = self.bending_1d_trajectory(segment_idx, trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.CIRCLE:
-                    self.commanded_forces[segment_idx] = self.circle_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
+                    commanded_tau_xyz = self.circle_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.HALF_8_SHAPE:
-                    self.commanded_forces[segment_idx] = self.half_8_shape_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
+                    commanded_tau_xyz = self.half_8_shape_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.FULL_8_SHAPE:
-                    self.commanded_forces[segment_idx] = self.full_8_shape_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
+                    commanded_tau_xyz = self.full_8_shape_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.CHIRP:
-                    self.commanded_forces[segment_idx] = self.chirp_trajectory(segment_idx, trajectory_time, force_peak)
+                    commanded_tau_xyz = self.chirp_trajectory(segment_idx, trajectory_time, force_peak)
                 elif trajectory_type == SegmentTrajectoryType.GBN:
-                    self.commanded_forces[segment_idx] = self.gbn_trajectory(segment_idx, trajectory_counter, force_peak)
-                elif trajectory_type in [SegmentTrajectoryType.GBN_RAND_AMPLITUDE, SegmentTrajectoryType.GBN_RAND_AMPLITUDE_RAND_ANGLE]:
-                    rand_angle = False
-                    if trajectory_type == SegmentTrajectoryType.GBN_RAND_AMPLITUDE_RAND_ANGLE:
-                        rand_angle = True
-                    self.commanded_forces[segment_idx] = self.gbn_rand_trajectory(segment_idx, trajectory_counter, force_peak, rand_angle)
+                    commanded_tau_xyz = self.gbn_trajectory(segment_idx, trajectory_counter, force_peak)
+                elif trajectory_type in [SegmentTrajectoryType.GBN_RAND]:
+                    commanded_tau_xyz = self.gbn_rand_trajectory(segment_idx, trajectory_counter, force_peak, self.random_torque_amplitudes[segment_idx],
+                                                                                  self.random_torque_azimuths[segment_idx], self.random_extension_forces[segment_idx])
                 elif trajectory_type == SegmentTrajectoryType.STAIRCASE:
-                    self.commanded_forces[segment_idx] = self.staircase_trajectory(segment_idx, trajectory_counter, force_peak)
+                    commanded_tau_xyz = self.staircase_trajectory(segment_idx, trajectory_counter, force_peak)
                 else:
                     raise NotImplementedError
 
-            self.commanded_pressures = self.forces_to_pressures(self.commanded_forces)
+                if commanded_tau_xyz.shape[0] == 2:
+                    # only torques were specified and not the extension force
+                    self.commanded_tau_xyz[segment_idx][0:2] = commanded_tau_xyz
+                    self.commanded_tau_xyz[segment_idx][2] = self.extension_forces[segment_idx]
+                elif commanded_tau_xyz.shape[0] == 3:
+                    self.commanded_tau_xyz[segment_idx] = commanded_tau_xyz
+                else:
+                    raise ValueError
+
+            self.commanded_pressures = self.tau_xyz_to_pressures(self.commanded_tau_xyz)
 
             if self.state_counter*self.timer_period >= self.experiment_duration:
                 self.state = ExperimentState.DEFLATE
@@ -226,7 +267,11 @@ class PressureTrajectoryNode(Node):
                 self.state_counter += 1
 
         elif self.state == ExperimentState.DEFLATE:
-            self.commanded_pressures = (1-(self.state_counter+1)*self.timer_period/self.inflate_time)*np.ones_like(self.commanded_pressures)*self.pressure_offset
+            inflation_ratio = 1-(self.state_counter+1)*self.timer_period/self.deflate_time
+            for segment_idx in range(self.num_segments):
+                self.commanded_tau_xyz[segment_idx] = inflation_ratio*np.array([0, 0, self.extension_forces[segment_idx]])
+
+            self.commanded_pressures = self.tau_xyz_to_pressures(self.commanded_tau_xyz)
 
             if self.state_counter*self.timer_period >= self.deflate_time:
                 self.shutdown()
@@ -258,8 +303,8 @@ class PressureTrajectoryNode(Node):
         else:
             f = force_peak * (2-trajectory_time / (0.5*trajectory_period))
 
-        f_x = np.cos(self.torque_angles[segment_idx])*f
-        f_y = np.sin(self.torque_angles[segment_idx])*f
+        f_x = np.cos(self.torque_azimuths[segment_idx])*f
+        f_y = np.sin(self.torque_azimuths[segment_idx])*f
 
         return np.array([f_x, f_y])
 
@@ -295,8 +340,8 @@ class PressureTrajectoryNode(Node):
 
         f = force_peak * np.sin(2 * np.pi * freq * trajectory_time)
 
-        f_x = np.cos(self.torque_angles[segment_idx])*f
-        f_y = np.sin(self.torque_angles[segment_idx])*f
+        f_x = np.cos(self.torque_azimuths[segment_idx])*f
+        f_y = np.sin(self.torque_azimuths[segment_idx])*f
 
         return np.array([f_x, f_y])
 
@@ -308,44 +353,52 @@ class PressureTrajectoryNode(Node):
 
         f = gbn_value * force_peak
 
-        f_x = np.cos(self.torque_angles[segment_idx])*f
-        f_y = np.sin(self.torque_angles[segment_idx])*f
+        f_x = np.cos(self.torque_azimuths[segment_idx])*f
+        f_y = np.sin(self.torque_azimuths[segment_idx])*f
 
         return np.array([f_x, f_y])
 
-    def gbn_rand_trajectory(self, segment_idx: int, trajectory_counter: int, force_peak: float, random_torque_angle: False) -> np.array:
+    def gbn_rand_trajectory(self, segment_idx: int, trajectory_counter: int, force_peak: float, 
+                            random_torque_amplitude: bool = False, random_torque_azimuth: bool = False,
+                            random_extension_force: bool = False) -> np.array:
         gbn_sequence = self.gbn_sequences[segment_idx]
 
-        sample_amplitude = False
+        sample_actuation = False
         if trajectory_counter > 0 and gbn_sequence[int(trajectory_counter)] != gbn_sequence[int(trajectory_counter)-1]:
-            sample_amplitude = True
+            sample_actuation = True
         else:
-            sample_amplitude = False 
+            sample_actuation = False 
 
-        if sample_amplitude:
-            if random_torque_angle:
-                self.torque_angles[segment_idx] = np.random.uniform(low=0, high=2*np.pi)
-                self.gbn_amplitudes[segment_idx] = np.random.uniform(low=0, high=force_peak)
-            else:
-                self.torque_angles[segment_idx] = self.torque_angles[segment_idx]
-                self.gbn_amplitudes[segment_idx] = np.random.uniform(low=-force_peak, high=force_peak)
+        if sample_actuation:
+            if random_torque_amplitude:
+                self.torque_amplitudes[segment_idx] = np.random.uniform(0, force_peak)
 
-        f = self.gbn_amplitudes[segment_idx]
+            if random_torque_azimuth:
+                self.torque_azimuths[segment_idx] = np.random.uniform(low=0, high=2*np.pi)
 
-        f_x = np.cos(self.torque_angles[segment_idx])*f
-        f_y = np.sin(self.torque_angles[segment_idx])*f
+            if random_extension_force:
+                self.extension_forces[segment_idx] = np.random.uniform(low=(self.pressure_offsets[segment_idx]-self.pressure_peaks[segment_idx])*self.num_chambers, 
+                                                                       high=self.pressure_offsets[segment_idx] * self.num_chambers)
+                
 
-        return np.array([f_x, f_y])
+            tau_x = np.cos(self.torque_azimuths[segment_idx]) * self.torque_amplitudes[segment_idx]
+            tau_y = np.sin(self.torque_azimuths[segment_idx]) * self.torque_amplitudes[segment_idx]
+            f_z = self.extension_forces[segment_idx]
+
+            self.gbn_tau_xzy_memory[segment_idx] = np.array([tau_x, tau_y, f_z])
+
+
+        return self.gbn_tau_xzy_memory[segment_idx]
 
     def staircase_trajectory(self, segment_idx: int, trajectory_counter: int, force_peak: float) -> np.array:
         f = self.staircase_sequences[segment_idx][trajectory_counter] * force_peak
 
-        f_x = np.cos(self.torque_angles[segment_idx])*f
-        f_y = np.sin(self.torque_angles[segment_idx])*f
+        f_x = np.cos(self.torque_azimuths[segment_idx])*f
+        f_y = np.sin(self.torque_azimuths[segment_idx])*f
 
         return np.array([f_x, f_y])
 
-    def forces_to_pressures(self, torques: np.array) -> np.array:
+    def tau_xyz_to_pressures(self, torques_xyz: np.array) -> np.array:
         """
             Convert a torque at tip of segment to a pressure.
             Input: num_segments x 2 array of torques
@@ -354,9 +407,9 @@ class PressureTrajectoryNode(Node):
 
         pressures = np.zeros(shape=(self.num_segments, self.num_chambers))
         for segment_idx in range(self.num_segments):
-            torque_seqment = torques[segment_idx, ...]
+            torque_seqment = torques_xyz[segment_idx, ...]
 
-            pressures_segment = self.pressure_offset + self.A_p @ torque_seqment
+            pressures_segment = self.A_p @ torque_seqment
 
             pressures_segment_sanitized = np.zeros_like(pressures_segment)
             if self.num_chambers == 4:
