@@ -13,9 +13,9 @@ def generate_launch_description():
     measured_pressures_topic = "/pneumatic_actuation/measured_pressures"
 
     use_vtem = True
-    use_mocap = True
+    use_mocap = False
     log_level = "warn"
-    node_frequency = 50.
+    node_frequency = 40.
     vtem_status_topic = "/vtem_control/vtem_status"
     common_vtem_params = {"num_valves": num_segments*num_chambers, "modbus_node": "192.168.4.3", "modbus_service": "502"}
 
@@ -30,17 +30,20 @@ def generate_launch_description():
                     "commanded_pressures_array_topic": "commanded_pressures_array",
                     "deflate_time": 5,
                     "experiment_duration": 120,
-                    "pressure_peaks": [45*100],
                     "inflate_time": 5,
                     "node_frequency": node_frequency,
                     "num_chambers": num_chambers,
                     "num_segments": num_segments,
-                    "pressure_offset": 125*100,
+                    "pressure_offsets": [170*100],
+                    "pressure_peaks": [100*100],
                     "radius_CoP": 0.1,
+                    "random_torque_amplitudes": [True],
+                    "random_torque_azimuths": [True],
+                    "random_extension_forces": [False],
                     "seed": 0,
-                    "segment_trajectories": [SegmentTrajectoryType.GBN_RAND_AMPLITUDE_RAND_ANGLE],
-                    "torque_angles": [0., 0.],
-                    "trajectory_frequencies": [0.5],
+                    "segment_trajectories": [SegmentTrajectoryType.GBN_RAND],
+                    "torque_azimuths": [0.],
+                    "trajectory_frequencies": [0.2],
                     "vtem_status_topic": vtem_status_topic,
                     "wait_for_vtem": use_vtem,
                 }
