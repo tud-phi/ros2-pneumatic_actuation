@@ -107,11 +107,12 @@ class PressureTrajectoryNode(Node):
         self.declare_parameter('pressure_peaks', [1500 for i in range(self.num_segments)]) # [N]
         self.pressure_peaks = self.get_parameter('pressure_peaks').value # [N]
         assert len(self.pressure_peaks) == self.num_segments
+        self.torque_amplitudes = []
         for i in range(self.num_segments):
             if self.random_torque_amplitudes[i]:
-                self.torque_amplitudes[i] = np.random.uniform(0, self.pressure_peaks[i] / self.A_p.max())
+                self.torque_amplitudes.append(np.random.uniform(0, self.pressure_peaks[i] / self.A_p.max()))
             else:
-                self.torque_amplitudes[i] = self.pressure_peaks[i] / self.A_p.max()
+                self.torque_amplitudes.append(self.pressure_peaks[i] / self.A_p.max())
 
         self.declare_parameter('random_torque_azimuths', [False for i in range(self.num_segments)])
         self.random_torque_azimuths = self.get_parameter('random_torque_azimuths').value # [rad]
@@ -129,12 +130,13 @@ class PressureTrajectoryNode(Node):
         self.declare_parameter('pressure_offsets', [150*100 for i in range(self.num_segments)]) # pressure in all chambers in straight configuration [Pa]
         self.pressure_offsets = self.get_parameter('pressure_offsets').value
         assert len(self.pressure_offsets) == self.num_segments
+        self.extension_forces = []
         for i in range(self.num_segments):
             if self.random_extension_forces[i]:
-                self.extension_forces[i] = np.random.uniform(low=(self.pressure_offsets[i]-self.pressure_peaks[i])*self.num_chambers, 
-                                                             high=self.pressure_offsets[i] * self.num_chambers)
+                self.extension_forces.append(np.random.uniform(low=(self.pressure_offsets[i]-self.pressure_peaks[i])*self.num_chambers, 
+                                                               high=self.pressure_offsets[i] * self.num_chambers))
             else:
-                self.extension_forces[i] = self.pressure_offsets[i] * self.num_chambers
+                self.extension_forces.append(self.pressure_offsets[i] * self.num_chambers)
 
         self.declare_parameter('node_frequency', 10.)
         self.node_frequency = self.get_parameter('node_frequency').value # [Hz]
@@ -164,9 +166,9 @@ class PressureTrajectoryNode(Node):
             or SegmentTrajectoryType.GBN_RAND in self.segment_trajectories:
             self.gbn_sequences = []
             self.gbn_tau_xzy_memory = []
-            for trajectory_period in self.trajectory_periods:
+            for i, trajectory_period in enumerate(self.trajectory_periods):
                 self.gbn_sequences.append(gbn(h=self.timer_period, T=1.1*self.experiment_duration, 
-                                          A=1, ts=trajectory_period, flag=1, seed=self.seed))
+                                          A=1, ts=trajectory_period, flag=1, seed=self.seed+i))
                 self.gbn_tau_xzy_memory.append(np.zeros(3))
 
         if SegmentTrajectoryType.STAIRCASE in self.segment_trajectories:
@@ -210,7 +212,7 @@ class PressureTrajectoryNode(Node):
         elif self.state == ExperimentState.INFLATE:
             inflation_ratio = (self.state_counter+1)*self.timer_period/self.inflate_time
             for segment_idx in range(self.num_segments):
-                self.commanded_tau_xyz[segment_idx, 2] = inflation_ratio*np.array([0, 0, self.extension_forces[segment_idx]])
+                self.commanded_tau_xyz[segment_idx] = inflation_ratio*np.array([0, 0, self.extension_forces[segment_idx]])
 
             self.commanded_pressures = self.tau_xyz_to_pressures(self.commanded_tau_xyz)
 
@@ -267,7 +269,7 @@ class PressureTrajectoryNode(Node):
         elif self.state == ExperimentState.DEFLATE:
             inflation_ratio = 1-(self.state_counter+1)*self.timer_period/self.deflate_time
             for segment_idx in range(self.num_segments):
-                self.commanded_tau_xyz[segment_idx, 2] = inflation_ratio*np.array([0, 0, self.extension_forces[segment_idx]])
+                self.commanded_tau_xyz[segment_idx] = inflation_ratio*np.array([0, 0, self.extension_forces[segment_idx]])
 
             self.commanded_pressures = self.tau_xyz_to_pressures(self.commanded_tau_xyz)
 
