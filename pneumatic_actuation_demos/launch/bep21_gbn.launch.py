@@ -35,7 +35,7 @@ def generate_launch_description():
                     "num_chambers": num_chambers,
                     "num_segments": num_segments,
                     "pressure_offsets": [170*100],
-                    "pressure_peaks": [100*100],
+                    "pressure_peaks": [150*100],
                     "radius_CoP": 0.1,
                     "random_torque_amplitudes": [True],
                     "random_torque_azimuths": [True],
@@ -59,7 +59,7 @@ def generate_launch_description():
                 executable='input_pressures_sub_node',
                 parameters=[
                     common_vtem_params,
-                    {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 225*100.0}
+                    {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 320*100.0}
                 ]
             ),
             Node(
