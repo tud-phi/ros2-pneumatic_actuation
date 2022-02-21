@@ -20,6 +20,11 @@ ros2 run pneumatic_actuation_demos pressure_trajectory_node
 ros2 launch pneumatic_actuation_demos default.launch.py
 ```
 
+BEP21:
+```bash
+ros2 launch pneumatic_actuation_demos bep21_gbn.launch.py
+```
+
 ## Conventions
 ### Chambers
 We are using a chamber numbering convention analogue to the parametrized lengths L_i referred to in [[1]](#1).
