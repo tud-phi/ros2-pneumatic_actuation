@@ -24,6 +24,7 @@ class SegmentTrajectoryType(IntEnum):
     """
     BENDING_1D = 0
     CIRCLE = 10
+    SPIRAL_2D = 11
     HALF_8_SHAPE = 20
     FULL_8_SHAPE = 21
     # System identification signals
@@ -222,6 +223,7 @@ class PressureTrajectoryNode(Node):
             else:
                 self.state_counter += 1
         elif self.state == ExperimentState.RUNNING:
+            experiment_time = self.state_counter*self.timer_period
             for segment_idx in range(self.num_segments):
                 trajectory_type = self.segment_trajectories[segment_idx]
                 num_completed_periods = self.state_counter * self.timer_period // self.trajectory_periods[segment_idx]
@@ -233,6 +235,9 @@ class PressureTrajectoryNode(Node):
                     commanded_tau_xyz = self.bending_1d_trajectory(segment_idx, trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.CIRCLE:
                     commanded_tau_xyz = self.circle_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
+                elif trajectory_type == SegmentTrajectoryType.SPIRAL_2D:
+                    commanded_tau_xyz = self.spiral_2d_trajectory(trajectory_time, experiment_time, self.trajectory_periods[segment_idx], 
+                                                                  self.experiment_duration, force_peak)
                 elif trajectory_type == SegmentTrajectoryType.HALF_8_SHAPE:
                     commanded_tau_xyz = self.half_8_shape_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.FULL_8_SHAPE:
@@ -332,6 +337,18 @@ class PressureTrajectoryNode(Node):
                           force_peak: float) -> np.array:
         f_x = force_peak * np.cos(2*np.pi*trajectory_time/trajectory_period)
         f_y = force_peak * np.sin(2*np.pi*trajectory_time/trajectory_period)
+
+        return np.array([f_x, f_y])
+
+    def spiral_2d_trajectory(self, trajectory_time: float, experiment_time: float, trajectory_period: float, 
+                             experiment_duration: float, force_peak: float) -> np.array:
+        if experiment_time < 0.5*experiment_duration:
+            amplitude = experiment_time / (experiment_duration / 2) * force_peak
+        else:
+            amplitude = force_peak - (experiment_time - 0.5*experiment_duration) / (experiment_duration / 2) * force_peak
+
+        f_x = amplitude * np.cos(2*np.pi*trajectory_time/trajectory_period)
+        f_y = amplitude * np.sin(2*np.pi*trajectory_time/trajectory_period)
 
         return np.array([f_x, f_y])
 
