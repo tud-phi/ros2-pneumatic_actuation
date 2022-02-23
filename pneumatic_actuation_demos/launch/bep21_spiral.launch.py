@@ -31,11 +31,11 @@ def generate_launch_description():
                     "node_frequency": node_frequency,
                     "num_chambers": num_chambers,
                     "num_segments": num_segments,
-                    "pressure_offsets": [170*100],
-                    "pressure_peaks": [150*100],
+                    "pressure_offsets": [200*100],
+                    "pressure_peaks": [225*100],
                     "radius_CoP": 0.1,
                     "segment_trajectories": [SegmentTrajectoryType.SPIRAL_2D],
-                    "trajectory_frequencies": [0.1], # frequency of circles
+                    "trajectory_frequencies": [0.2], # frequency of circles
                     "vtem_status_topic": vtem_status_topic,
                     "wait_for_vtem": use_vtem,
                 }
@@ -51,7 +51,7 @@ def generate_launch_description():
                 executable='input_pressures_sub_node',
                 parameters=[
                     common_vtem_params,
-                    {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 200*100.0}
+                    {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 425*100.0}
                 ]
             ),
             Node(
