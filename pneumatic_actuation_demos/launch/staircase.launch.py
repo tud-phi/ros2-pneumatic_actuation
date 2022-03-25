@@ -1,5 +1,6 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
+import numpy as np
 
 from pneumatic_actuation_demos.pressure_trajectory_node import SegmentTrajectoryType
 
@@ -25,18 +26,18 @@ def generate_launch_description():
                     "commanded_pressures_topic": commanded_pressures_topic,
                     "commanded_pressures_array_topic": "commanded_pressures_array",
                     "deflate_time": 5,
-                    "experiment_duration": 200,
+                    "experiment_duration": 100,
                     "inflate_time": 5,
                     "node_frequency": 100.,
                     "num_chambers": num_chambers,
                     "num_segments": num_segments,
-                    "pressure_offsets": [250*100],
-                    "pressure_peaks": [250*100],
+                    "pressure_offsets": [300*100],
+                    "pressure_peaks": [300*100],
                     "radius_CoP": 0.1,
                     "segment_trajectories": [SegmentTrajectoryType.STAIRCASE],
-                    "step_periods": [2.],
-                    "torque_azimuths": [0.],
-                    "trajectory_frequencies": [0.05],
+                    "step_periods": [10.],
+                    "torque_azimuths": [0/180*np.pi],
+                    "trajectory_frequencies": [0.01],
                     "vtem_status_topic": vtem_status_topic,
                     "wait_for_vtem": use_vtem,
                 }
@@ -52,7 +53,7 @@ def generate_launch_description():
                 executable='input_pressures_sub_node',
                 parameters=[
                     common_vtem_params,
-                    {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 500*100.0}
+                    {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 600*100.0}
                 ]
             ),
             Node(
