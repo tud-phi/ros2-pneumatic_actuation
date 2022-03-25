@@ -4,7 +4,7 @@ from launch_ros.actions import Node
 from pneumatic_actuation_demos.pressure_trajectory_node import SegmentTrajectoryType
 
 def generate_launch_description():
-    num_segments = 2
+    num_segments = 1
     num_chambers = 4
 
     commanded_pressures_topic = "/pneumatic_actuation/commanded_pressures"
@@ -30,16 +30,16 @@ def generate_launch_description():
                     "node_frequency": node_frequency,
                     "num_chambers": num_chambers,
                     "num_segments": num_segments,
-                    "pressure_offsets": [125*100, 125*100],
-                    "pressure_peaks": [45*100, 100*100],
+                    "pressure_offsets": [250*100],
+                    "pressure_peaks": [250*100],
                     "radius_CoP": 0.1,
-                    "random_torque_amplitudes": [True, True],
-                    "random_torque_azimuths": [True, True],
-                    "random_extension_forces": [False, False],
+                    "random_torque_amplitudes": [True],
+                    "random_torque_azimuths": [True],
+                    "random_extension_forces": [False],
                     "seed": 0,
-                    "segment_trajectories": [SegmentTrajectoryType.GBN_RAND, SegmentTrajectoryType.GBN_RAND],
-                    "torque_azimuths": [0., 0.],
-                    "trajectory_frequencies": [0.5, 0.5],
+                    "segment_trajectories": [SegmentTrajectoryType.GBN_RAND],
+                    "torque_azimuths": [0.],
+                    "trajectory_frequencies": [0.5],
                     "vtem_status_topic": vtem_status_topic,
                     "wait_for_vtem": use_vtem,
                 }
@@ -55,7 +55,7 @@ def generate_launch_description():
                 executable='input_pressures_sub_node',
                 parameters=[
                     common_vtem_params,
-                    {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 225*100.0}
+                    {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 500*100.0}
                 ]
             ),
             Node(
