@@ -22,7 +22,8 @@ class SegmentTrajectoryType(IntEnum):
     """
     Enum class for the trajectory type of an individual segment.
     """
-    BENDING_1D = 0
+    CONSTANT = 0
+    BENDING_1D = 1
     CIRCLE = 10
     SPIRAL_2D = 11
     HALF_8_SHAPE = 20
@@ -231,7 +232,9 @@ class PressureTrajectoryNode(Node):
                 trajectory_counter = self.state_counter - int(num_completed_periods * self.trajectory_periods[segment_idx] / self.timer_period)
                 force_peak = self.pressure_peaks[segment_idx] / np.max(self.A_p)
 
-                if trajectory_type == SegmentTrajectoryType.BENDING_1D:
+                if trajectory_type == SegmentTrajectoryType.CONSTANT:
+                    commanded_tau_xyz = self.constant_trajectory(segment_idx, force_peak)
+                elif trajectory_type == SegmentTrajectoryType.BENDING_1D:
                     commanded_tau_xyz = self.bending_1d_trajectory(segment_idx, trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.CIRCLE:
                     commanded_tau_xyz = self.circle_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
@@ -301,8 +304,14 @@ class PressureTrajectoryNode(Node):
     def vtem_status_callback(self, msg):
         self.vtem_status = msg.data
 
+    def constant_trajectory(self, segment_idx: int, force_peak: float) -> np.array:
+        f_x = np.cos(self.torque_azimuths[segment_idx]) * force_peak
+        f_y = np.sin(self.torque_azimuths[segment_idx]) * force_peak
+
+        return np.array([f_x, f_y])
+
     def bending_1d_trajectory(self, segment_idx: int, trajectory_time: float, trajectory_period: float, 
-                                force_peak: float) -> np.array:
+                              force_peak: float) -> np.array:
         if trajectory_time < 0.5*trajectory_period:
             f = force_peak * trajectory_time / (0.5*trajectory_period)
         else:
