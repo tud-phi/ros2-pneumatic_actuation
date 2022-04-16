@@ -10,7 +10,7 @@ def generate_launch_description():
     commanded_pressures_topic = "/pneumatic_actuation/commanded_pressures"
     measured_pressures_topic = "/pneumatic_actuation/measured_pressures"
 
-    use_vtem = True
+    use_vtem = False
     node_frequency = 100.
     vtem_status_topic = "/vtem_control/vtem_status"
     common_vtem_params = {"num_valves": num_segments*num_chambers, "modbus_node": "192.168.4.3", "modbus_service": "502"}
@@ -26,7 +26,7 @@ def generate_launch_description():
                     "commanded_pressures_array_topic": "commanded_pressures_array",
                     "deflate_time": 5,
                     # the amplitude will once extend to the pressure preak and then come back to zero pressure by the time the experiment ends
-                    "experiment_duration": 480,
+                    "experiment_duration": 100,
                     "inflate_time": 5,
                     "node_frequency": node_frequency,
                     "num_chambers": num_chambers,
@@ -34,8 +34,8 @@ def generate_launch_description():
                     "pressure_offsets": [125*100],
                     "pressure_peaks": [50*100],
                     "radius_CoP": 0.1,
-                    "segment_trajectories": [SegmentTrajectoryType.SPIRAL_2D],
-                    "trajectory_frequencies": [0.1], # frequency of circles
+                    "segment_trajectories": [SegmentTrajectoryType.SPIRAL_2D_CONST_VEL],
+                    "trajectory_velocities": [100.], # Nm / s
                     "vtem_status_topic": vtem_status_topic,
                     "wait_for_vtem": use_vtem,
                 }

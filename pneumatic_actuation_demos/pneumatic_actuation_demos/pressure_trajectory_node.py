@@ -6,7 +6,7 @@ from pygbn import gbn
 
 from pneumatic_actuation_msgs.msg import FluidPressures
 from sensor_msgs.msg import FluidPressure
-from std_msgs.msg import Bool, Float64MultiArray, MultiArrayLayout, MultiArrayDimension
+from std_msgs.msg import Bool, Float64, Float64MultiArray, MultiArrayLayout, MultiArrayDimension
 
 
 class ExperimentState(IntEnum):
@@ -25,7 +25,8 @@ class SegmentTrajectoryType(IntEnum):
     CONSTANT = 0
     BENDING_1D = 1
     CIRCLE = 10
-    SPIRAL_2D = 11
+    SPIRAL_2D_CONST_PERIOD = 11 # constant circle period
+    SPIRAL_2D_CONST_VEL = 12 # constant cartesian velocity
     HALF_8_SHAPE = 20
     FULL_8_SHAPE = 21
     # System identification signals
@@ -59,6 +60,8 @@ class PressureTrajectoryNode(Node):
         self.declare_parameter('commanded_pressures_array_topic', '/pneumatic_actuation/commanded_pressures_array')
         commanded_pressures_array_topic = self.get_parameter('commanded_pressures_array_topic').get_parameter_value().string_value
         self.publisher_array = self.create_publisher(Float64MultiArray, commanded_pressures_array_topic, 10)
+
+        self.publisher_debugging = self.create_publisher(Float64, "debugging", 10)
 
         # Option if we should wait with trajectory for VTEM boot-up
         self.declare_parameter('wait_for_vtem', True)
@@ -102,6 +105,10 @@ class PressureTrajectoryNode(Node):
         self.trajectory_frequencies = self.get_parameter('trajectory_frequencies').value
         assert len(self.trajectory_frequencies) == self.num_segments
         self.trajectory_periods = [1/x for x in self.trajectory_frequencies]
+
+        self.declare_parameter('trajectory_velocities', [0. for i in range(self.num_segments)])
+        self.trajectory_velocities = self.get_parameter('trajectory_velocities').value
+        assert len(self.trajectory_velocities) == self.num_segments
 
         self.declare_parameter('random_torque_amplitudes', [False for i in range(self.num_segments)])
         self.random_torque_amplitudes = self.get_parameter('random_torque_amplitudes').value
@@ -238,9 +245,12 @@ class PressureTrajectoryNode(Node):
                     commanded_tau_xyz = self.bending_1d_trajectory(segment_idx, trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.CIRCLE:
                     commanded_tau_xyz = self.circle_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
-                elif trajectory_type == SegmentTrajectoryType.SPIRAL_2D:
-                    commanded_tau_xyz = self.spiral_2d_trajectory(trajectory_time, experiment_time, self.trajectory_periods[segment_idx], 
-                                                                  self.experiment_duration, force_peak)
+                elif trajectory_type == SegmentTrajectoryType.SPIRAL_2D_CONST_PERIOD:
+                    commanded_tau_xyz = self.spiral_2d_const_period_trajectory(trajectory_time, experiment_time, self.trajectory_periods[segment_idx], 
+                                                                               self.experiment_duration, force_peak)
+                elif trajectory_type == SegmentTrajectoryType.SPIRAL_2D_CONST_VEL:
+                    commanded_tau_xyz = self.spiral_2d_const_vel_trajectory(trajectory_time, experiment_time, self.trajectory_velocities[segment_idx], 
+                                                                            self.experiment_duration, force_peak)
                 elif trajectory_type == SegmentTrajectoryType.HALF_8_SHAPE:
                     commanded_tau_xyz = self.half_8_shape_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.FULL_8_SHAPE:
@@ -349,7 +359,7 @@ class PressureTrajectoryNode(Node):
 
         return np.array([f_x, f_y])
 
-    def spiral_2d_trajectory(self, trajectory_time: float, experiment_time: float, trajectory_period: float, 
+    def spiral_2d_const_period_trajectory(self, trajectory_time: float, experiment_time: float, trajectory_period: float, 
                              experiment_duration: float, force_peak: float) -> np.array:
         if experiment_time < 0.5*experiment_duration:
             amplitude = experiment_time / (experiment_duration / 2) * force_peak
@@ -358,6 +368,32 @@ class PressureTrajectoryNode(Node):
 
         f_x = amplitude * np.cos(2*np.pi*trajectory_time/trajectory_period)
         f_y = amplitude * np.sin(2*np.pi*trajectory_time/trajectory_period)
+
+        return np.array([f_x, f_y])
+
+    def spiral_2d_const_vel_trajectory(self, trajectory_time: float, experiment_time: float, trajectory_velocity: float, 
+                                       experiment_duration: float, force_peak: float) -> np.array:
+        # spiral with constant linear velocity
+        # https://www-ncbi.nlm.nih.gov/pmc/articles/PMC6179405/
+
+        # if experiment_time < 0.5*experiment_duration:
+        #     amplitude = experiment_time / (experiment_duration / 2) * force_peak
+        # else:
+        #     amplitude = force_peak - (experiment_time - 0.5*experiment_duration) / (experiment_duration / 2) * force_peak
+
+        radial_sampling_pitch = force_peak**2*np.pi/(trajectory_velocity*experiment_duration)
+
+        phase = np.sqrt(trajectory_velocity*4*np.pi*experiment_time/radial_sampling_pitch)
+        amplitude = np.sqrt(trajectory_velocity*radial_sampling_pitch*experiment_time/np.pi)
+
+        debug_msg = Float64()
+        debug_msg.data = float(phase)
+        self.publisher_debugging.publish(debug_msg)
+
+        self.get_logger().info(f"Phase of spiral circle {phase}s")
+
+        f_x = amplitude * np.cos(phase)
+        f_y = amplitude * np.sin(phase)
 
         return np.array([f_x, f_y])
 
