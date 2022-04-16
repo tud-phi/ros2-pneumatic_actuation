@@ -29,7 +29,7 @@ def generate_launch_description():
                     "commanded_pressures_topic": commanded_pressures_topic,
                     "commanded_pressures_array_topic": "commanded_pressures_array",
                     "deflate_time": 5,
-                    "experiment_duration": 180,
+                    "experiment_duration": 600,
                     "inflate_time": 5,
                     "node_frequency": node_frequency,
                     "num_chambers": num_chambers,
