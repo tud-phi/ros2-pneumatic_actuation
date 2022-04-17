@@ -1,10 +1,11 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
+import numpy as np
 
 from pneumatic_actuation_demos.pressure_trajectory_node import SegmentTrajectoryType
 
 def generate_launch_description():
-    num_segments = 1
+    num_segments = 3
     num_chambers = 4
 
     commanded_pressures_topic = "/pneumatic_actuation/commanded_pressures"
@@ -25,17 +26,17 @@ def generate_launch_description():
                     "commanded_pressures_topic": commanded_pressures_topic,
                     "commanded_pressures_array_topic": "commanded_pressures_array",
                     "deflate_time": 5,
-                    # the amplitude will once extend to the pressure preak and then come back to zero pressure by the time the experiment ends
-                    "experiment_duration": 480,
+                    "experiment_duration": 60,
                     "inflate_time": 5,
                     "node_frequency": node_frequency,
                     "num_chambers": num_chambers,
                     "num_segments": num_segments,
-                    "pressure_offsets": [125*100],
-                    "pressure_peaks": [50*100],
+                    "pressure_offsets": [50*100, 45*100, 35*100],
+                    "pressure_peaks": [50*100, 45*100, 35*100],
                     "radius_CoP": 0.1,
-                    "segment_trajectories": [SegmentTrajectoryType.SPIRAL_2D],
-                    "trajectory_frequencies": [0.1], # frequency of circles
+                    "segment_trajectories": [SegmentTrajectoryType.CONSTANT, SegmentTrajectoryType.CONSTANT, SegmentTrajectoryType.CONSTANT],
+                    "torque_azimuths": [270/180*np.pi, 270/180*np.pi, 0/180*np.pi],
+                    "trajectory_frequencies": [0.1, 0.1, 0.1],
                     "vtem_status_topic": vtem_status_topic,
                     "wait_for_vtem": use_vtem,
                 }
@@ -51,7 +52,7 @@ def generate_launch_description():
                 executable='input_pressures_sub_node',
                 parameters=[
                     common_vtem_params,
-                    {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 200*100.0}
+                    {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 150*100.0}
                 ]
             ),
             Node(

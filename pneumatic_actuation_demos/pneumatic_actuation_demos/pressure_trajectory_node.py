@@ -6,7 +6,7 @@ from pygbn import gbn
 
 from pneumatic_actuation_msgs.msg import FluidPressures
 from sensor_msgs.msg import FluidPressure
-from std_msgs.msg import Bool, Float64MultiArray, MultiArrayLayout, MultiArrayDimension
+from std_msgs.msg import Bool, Float64, Float64MultiArray, MultiArrayLayout, MultiArrayDimension
 
 
 class ExperimentState(IntEnum):
@@ -22,9 +22,12 @@ class SegmentTrajectoryType(IntEnum):
     """
     Enum class for the trajectory type of an individual segment.
     """
-    BENDING_1D = 0
+    CONSTANT = 0
+    BENDING_1D = 1
+    BENDING_1D_MOVING_AZIMUTH = 2
     CIRCLE = 10
-    SPIRAL_2D = 11
+    SPIRAL_2D_CONST_ANGULAR_VEL = 11 # spiral with constant angular velocity
+    SPIRAL_2D_CONST_LINEAR_VEL = 12 # spiral with constant linear velocity in Cartesian torque space
     HALF_8_SHAPE = 20
     FULL_8_SHAPE = 21
     # System identification signals
@@ -102,6 +105,10 @@ class PressureTrajectoryNode(Node):
         assert len(self.trajectory_frequencies) == self.num_segments
         self.trajectory_periods = [1/x for x in self.trajectory_frequencies]
 
+        self.declare_parameter('trajectory_velocities', [0. for i in range(self.num_segments)])
+        self.trajectory_velocities = self.get_parameter('trajectory_velocities').value
+        assert len(self.trajectory_velocities) == self.num_segments
+
         self.declare_parameter('random_torque_amplitudes', [False for i in range(self.num_segments)])
         self.random_torque_amplitudes = self.get_parameter('random_torque_amplitudes').value
         assert len(self.random_torque_amplitudes) == self.num_segments
@@ -124,6 +131,10 @@ class PressureTrajectoryNode(Node):
         for i in range(self.num_segments):
             if self.random_torque_azimuths[i]:
                 self.torque_azimuths[i] = np.random.uniform(-np.pi, np.pi)
+        self.declare_parameter('torque_azimuth_frequencies', [0. for i in range(self.num_segments)])
+        self.torque_azimuth_frequencies = self.get_parameter('torque_azimuth_frequencies').value # [rad]
+        assert len(self.torque_azimuth_frequencies) == self.num_segments
+        self.torque_azimuth_periods = [1/x for x in self.torque_azimuth_frequencies]
 
         self.declare_parameter('random_extension_forces', [False for i in range(self.num_segments)])
         self.random_extension_forces = self.get_parameter('random_extension_forces').value # [rad]
@@ -138,6 +149,10 @@ class PressureTrajectoryNode(Node):
                                                                high=self.pressure_offsets[i] * self.num_chambers))
             else:
                 self.extension_forces.append(self.pressure_offsets[i] * self.num_chambers)
+
+        self.declare_parameter('amplitude_derivative_signs', [1 for i in range(self.num_segments)])
+        self.amplitude_derivative_signs = self.get_parameter('amplitude_derivative_signs').value # [rad]
+        assert len(self.amplitude_derivative_signs) == self.num_segments
 
         self.declare_parameter('node_frequency', 10.)
         self.node_frequency = self.get_parameter('node_frequency').value # [Hz]
@@ -231,13 +246,21 @@ class PressureTrajectoryNode(Node):
                 trajectory_counter = self.state_counter - int(num_completed_periods * self.trajectory_periods[segment_idx] / self.timer_period)
                 force_peak = self.pressure_peaks[segment_idx] / np.max(self.A_p)
 
-                if trajectory_type == SegmentTrajectoryType.BENDING_1D:
+                if trajectory_type == SegmentTrajectoryType.CONSTANT:
+                    commanded_tau_xyz = self.constant_trajectory(segment_idx, force_peak)
+                elif trajectory_type == SegmentTrajectoryType.BENDING_1D:
                     commanded_tau_xyz = self.bending_1d_trajectory(segment_idx, trajectory_time, self.trajectory_periods[segment_idx], force_peak)
+                elif trajectory_type == SegmentTrajectoryType.BENDING_1D_MOVING_AZIMUTH:
+                    commanded_tau_xyz = self.bending_1d_moving_azimuth_trajectory(trajectory_time, experiment_time, self.trajectory_periods[segment_idx], 
+                                                                                  force_peak, self.torque_azimuth_periods[segment_idx])
                 elif trajectory_type == SegmentTrajectoryType.CIRCLE:
                     commanded_tau_xyz = self.circle_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
-                elif trajectory_type == SegmentTrajectoryType.SPIRAL_2D:
-                    commanded_tau_xyz = self.spiral_2d_trajectory(trajectory_time, experiment_time, self.trajectory_periods[segment_idx], 
-                                                                  self.experiment_duration, force_peak)
+                elif trajectory_type == SegmentTrajectoryType.SPIRAL_2D_CONST_ANGULAR_VEL:
+                    commanded_tau_xyz = self.spiral_2d_const_angular_vel_trajectory(trajectory_time, experiment_time, self.trajectory_periods[segment_idx], 
+                                                                                    self.experiment_duration, force_peak, self.amplitude_derivative_signs[segment_idx])
+                elif trajectory_type == SegmentTrajectoryType.SPIRAL_2D_CONST_LINEAR_VEL:
+                    commanded_tau_xyz = self.spiral_2d_const_linear_vel_trajectory(experiment_time, self.trajectory_velocities[segment_idx], 
+                                                                                   self.experiment_duration, force_peak, self.amplitude_derivative_signs[segment_idx])
                 elif trajectory_type == SegmentTrajectoryType.HALF_8_SHAPE:
                     commanded_tau_xyz = self.half_8_shape_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.FULL_8_SHAPE:
@@ -301,8 +324,14 @@ class PressureTrajectoryNode(Node):
     def vtem_status_callback(self, msg):
         self.vtem_status = msg.data
 
+    def constant_trajectory(self, segment_idx: int, force_peak: float) -> np.array:
+        f_x = np.cos(self.torque_azimuths[segment_idx]) * force_peak
+        f_y = np.sin(self.torque_azimuths[segment_idx]) * force_peak
+
+        return np.array([f_x, f_y])
+
     def bending_1d_trajectory(self, segment_idx: int, trajectory_time: float, trajectory_period: float, 
-                                force_peak: float) -> np.array:
+                              force_peak: float) -> np.array:
         if trajectory_time < 0.5*trajectory_period:
             f = force_peak * trajectory_time / (0.5*trajectory_period)
         else:
@@ -310,6 +339,19 @@ class PressureTrajectoryNode(Node):
 
         f_x = np.cos(self.torque_azimuths[segment_idx])*f
         f_y = np.sin(self.torque_azimuths[segment_idx])*f
+
+        return np.array([f_x, f_y])
+
+    def bending_1d_moving_azimuth_trajectory(self, trajectory_time: float, experiment_time: float, 
+                                             trajectory_period: float, force_peak: float, torque_azimuth_period: float) -> np.array:
+        bending_period = trajectory_period
+        if trajectory_time < 0.5*bending_period:
+            f = force_peak * trajectory_time / (0.5*bending_period)
+        else:
+            f = force_peak * (2-trajectory_time / (0.5*bending_period))
+
+        f_x = np.cos(2*np.pi*experiment_time/torque_azimuth_period)*f
+        f_y = np.sin(2*np.pi*experiment_time/torque_azimuth_period)*f
 
         return np.array([f_x, f_y])
 
@@ -340,15 +382,35 @@ class PressureTrajectoryNode(Node):
 
         return np.array([f_x, f_y])
 
-    def spiral_2d_trajectory(self, trajectory_time: float, experiment_time: float, trajectory_period: float, 
-                             experiment_duration: float, force_peak: float) -> np.array:
-        if experiment_time < 0.5*experiment_duration:
+    def spiral_2d_const_angular_vel_trajectory(self, trajectory_time: float, experiment_time: float, trajectory_period: float, 
+                             experiment_duration: float, force_peak: float, amplitude_derivative_sign: int = 1) -> np.array:
+        if amplitude_derivative_sign == 1:
             amplitude = experiment_time / (experiment_duration / 2) * force_peak
-        else:
+        elif amplitude_derivative_sign == -1:
             amplitude = force_peak - (experiment_time - 0.5*experiment_duration) / (experiment_duration / 2) * force_peak
+        else:
+            raise ValueError
 
         f_x = amplitude * np.cos(2*np.pi*trajectory_time/trajectory_period)
         f_y = amplitude * np.sin(2*np.pi*trajectory_time/trajectory_period)
+
+        return np.array([f_x, f_y])
+
+    def spiral_2d_const_linear_vel_trajectory(self, experiment_time: float, trajectory_velocity: float, 
+                                              experiment_duration: float, force_peak: float, amplitude_derivative_sign: int = 1) -> np.array:
+        # spiral with constant linear velocity
+        # Carrasco-Zevallos, Oscar M., et al. 
+        # "Constant linear velocity spiral scanning for near video rate 4D OCT ophthalmic and surgical imaging with isotropic transverse sampling." 
+        # Biomedical optics express 9.10 (2018): 5052-5070.
+        # https://www-ncbi.nlm.nih.gov/pmc/articles/PMC6179405/
+
+        spiral_amplitude_time = (1 - amplitude_derivative_sign)*experiment_duration/2 + amplitude_derivative_sign*experiment_time
+
+        amplitude = force_peak*np.sqrt(spiral_amplitude_time/experiment_duration)/2
+        phase = 2*trajectory_velocity/force_peak*np.sqrt(spiral_amplitude_time*experiment_duration)
+
+        f_x = amplitude * np.cos(phase)
+        f_y = amplitude * np.sin(phase)
 
         return np.array([f_x, f_y])
 
