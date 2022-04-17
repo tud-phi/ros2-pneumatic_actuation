@@ -26,16 +26,16 @@ def generate_launch_description():
                     "commanded_pressures_array_topic": "commanded_pressures_array",
                     "deflate_time": 5,
                     # the amplitude will once extend to the pressure preak and then come back to zero pressure by the time the experiment ends
-                    "experiment_duration": 480,
+                    "experiment_duration": 600,
                     "inflate_time": 5,
                     "node_frequency": node_frequency,
                     "num_chambers": num_chambers,
                     "num_segments": num_segments,
-                    "pressure_offsets": [200*100],
+                    "pressure_offsets": [225*100],
                     "pressure_peaks": [225*100],
                     "radius_CoP": 0.1,
-                    "segment_trajectories": [SegmentTrajectoryType.SPIRAL_2D],
-                    "trajectory_frequencies": [0.2], # frequency of circles
+                    "segment_trajectories": [SegmentTrajectoryType.SPIRAL_2D_CONST_LINEAR_VEL],
+                    "trajectory_velocities": [100.], # Nm / s
                     "vtem_status_topic": vtem_status_topic,
                     "wait_for_vtem": use_vtem,
                 }
@@ -51,7 +51,7 @@ def generate_launch_description():
                 executable='input_pressures_sub_node',
                 parameters=[
                     common_vtem_params,
-                    {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 425*100.0}
+                    {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 450*100.0}
                 ]
             ),
             Node(
