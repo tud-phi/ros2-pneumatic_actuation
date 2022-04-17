@@ -25,8 +25,8 @@ class SegmentTrajectoryType(IntEnum):
     CONSTANT = 0
     BENDING_1D = 1
     CIRCLE = 10
-    SPIRAL_2D_CONST_PERIOD = 11 # constant circle period
-    SPIRAL_2D_CONST_VEL = 12 # constant cartesian velocity
+    SPIRAL_2D_CONST_ANGULAR_VEL = 11 # spiral with constant angular velocity
+    SPIRAL_2D_CONST_LINEAR_VEL = 12 # spiral with constant linear velocity in Cartesian torque space
     HALF_8_SHAPE = 20
     FULL_8_SHAPE = 21
     # System identification signals
@@ -60,8 +60,6 @@ class PressureTrajectoryNode(Node):
         self.declare_parameter('commanded_pressures_array_topic', '/pneumatic_actuation/commanded_pressures_array')
         commanded_pressures_array_topic = self.get_parameter('commanded_pressures_array_topic').get_parameter_value().string_value
         self.publisher_array = self.create_publisher(Float64MultiArray, commanded_pressures_array_topic, 10)
-
-        self.publisher_debugging = self.create_publisher(Float64, "debugging", 10)
 
         # Option if we should wait with trajectory for VTEM boot-up
         self.declare_parameter('wait_for_vtem', True)
@@ -146,6 +144,10 @@ class PressureTrajectoryNode(Node):
                                                                high=self.pressure_offsets[i] * self.num_chambers))
             else:
                 self.extension_forces.append(self.pressure_offsets[i] * self.num_chambers)
+
+        self.declare_parameter('amplitude_derivative_signs', [1 for i in range(self.num_segments)])
+        self.amplitude_derivative_signs = self.get_parameter('amplitude_derivative_signs').value # [rad]
+        assert len(self.amplitude_derivative_signs) == self.num_segments
 
         self.declare_parameter('node_frequency', 10.)
         self.node_frequency = self.get_parameter('node_frequency').value # [Hz]
@@ -245,12 +247,12 @@ class PressureTrajectoryNode(Node):
                     commanded_tau_xyz = self.bending_1d_trajectory(segment_idx, trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.CIRCLE:
                     commanded_tau_xyz = self.circle_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
-                elif trajectory_type == SegmentTrajectoryType.SPIRAL_2D_CONST_PERIOD:
-                    commanded_tau_xyz = self.spiral_2d_const_period_trajectory(trajectory_time, experiment_time, self.trajectory_periods[segment_idx], 
-                                                                               self.experiment_duration, force_peak)
-                elif trajectory_type == SegmentTrajectoryType.SPIRAL_2D_CONST_VEL:
-                    commanded_tau_xyz = self.spiral_2d_const_vel_trajectory(trajectory_time, experiment_time, self.trajectory_velocities[segment_idx], 
-                                                                            self.experiment_duration, force_peak)
+                elif trajectory_type == SegmentTrajectoryType.SPIRAL_2D_CONST_ANGULAR_VEL:
+                    commanded_tau_xyz = self.spiral_2d_const_angular_vel_trajectory(trajectory_time, experiment_time, self.trajectory_periods[segment_idx], 
+                                                                                    self.experiment_duration, force_peak, self.amplitude_derivative_signs[segment_idx])
+                elif trajectory_type == SegmentTrajectoryType.SPIRAL_2D_CONST_LINEAR_VEL:
+                    commanded_tau_xyz = self.spiral_2d_const_linear_vel_trajectory(experiment_time, self.trajectory_velocities[segment_idx], 
+                                                                                   self.experiment_duration, force_peak, self.amplitude_derivative_signs[segment_idx])
                 elif trajectory_type == SegmentTrajectoryType.HALF_8_SHAPE:
                     commanded_tau_xyz = self.half_8_shape_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.FULL_8_SHAPE:
@@ -359,38 +361,32 @@ class PressureTrajectoryNode(Node):
 
         return np.array([f_x, f_y])
 
-    def spiral_2d_const_period_trajectory(self, trajectory_time: float, experiment_time: float, trajectory_period: float, 
-                             experiment_duration: float, force_peak: float) -> np.array:
-        if experiment_time < 0.5*experiment_duration:
+    def spiral_2d_const_angular_vel_trajectory(self, trajectory_time: float, experiment_time: float, trajectory_period: float, 
+                             experiment_duration: float, force_peak: float, amplitude_derivative_sign: int = 1) -> np.array:
+        if amplitude_derivative_sign == 1:
             amplitude = experiment_time / (experiment_duration / 2) * force_peak
-        else:
+        elif amplitude_derivative_sign == -1:
             amplitude = force_peak - (experiment_time - 0.5*experiment_duration) / (experiment_duration / 2) * force_peak
+        else:
+            raise ValueError
 
         f_x = amplitude * np.cos(2*np.pi*trajectory_time/trajectory_period)
         f_y = amplitude * np.sin(2*np.pi*trajectory_time/trajectory_period)
 
         return np.array([f_x, f_y])
 
-    def spiral_2d_const_vel_trajectory(self, trajectory_time: float, experiment_time: float, trajectory_velocity: float, 
-                                       experiment_duration: float, force_peak: float) -> np.array:
+    def spiral_2d_const_linear_vel_trajectory(self, experiment_time: float, trajectory_velocity: float, 
+                                              experiment_duration: float, force_peak: float, amplitude_derivative_sign: int = 1) -> np.array:
         # spiral with constant linear velocity
+        # Carrasco-Zevallos, Oscar M., et al. 
+        # "Constant linear velocity spiral scanning for near video rate 4D OCT ophthalmic and surgical imaging with isotropic transverse sampling." 
+        # Biomedical optics express 9.10 (2018): 5052-5070.
         # https://www-ncbi.nlm.nih.gov/pmc/articles/PMC6179405/
 
-        # if experiment_time < 0.5*experiment_duration:
-        #     amplitude = experiment_time / (experiment_duration / 2) * force_peak
-        # else:
-        #     amplitude = force_peak - (experiment_time - 0.5*experiment_duration) / (experiment_duration / 2) * force_peak
+        spiral_amplitude_time = (1 - amplitude_derivative_sign)*experiment_duration/2 + amplitude_derivative_sign*experiment_time
 
-        radial_sampling_pitch = force_peak**2*np.pi/(trajectory_velocity*experiment_duration)
-
-        phase = np.sqrt(trajectory_velocity*4*np.pi*experiment_time/radial_sampling_pitch)
-        amplitude = np.sqrt(trajectory_velocity*radial_sampling_pitch*experiment_time/np.pi)
-
-        debug_msg = Float64()
-        debug_msg.data = float(phase)
-        self.publisher_debugging.publish(debug_msg)
-
-        self.get_logger().info(f"Phase of spiral circle {phase}s")
+        amplitude = force_peak*np.sqrt(spiral_amplitude_time/experiment_duration)/2
+        phase = 2*trajectory_velocity/force_peak*np.sqrt(spiral_amplitude_time*experiment_duration)
 
         f_x = amplitude * np.cos(phase)
         f_y = amplitude * np.sin(phase)

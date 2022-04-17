@@ -26,16 +26,16 @@ def generate_launch_description():
                     "commanded_pressures_array_topic": "commanded_pressures_array",
                     "deflate_time": 5,
                     # the amplitude will once extend to the pressure preak and then come back to zero pressure by the time the experiment ends
-                    "experiment_duration": 100,
+                    "experiment_duration": 480,
                     "inflate_time": 5,
                     "node_frequency": node_frequency,
                     "num_chambers": num_chambers,
                     "num_segments": num_segments,
-                    "pressure_offsets": [125*100],
+                    "pressure_offsets": [150*100],
                     "pressure_peaks": [50*100],
                     "radius_CoP": 0.1,
-                    "segment_trajectories": [SegmentTrajectoryType.SPIRAL_2D_CONST_VEL],
-                    "trajectory_velocities": [100.], # Nm / s
+                    "segment_trajectories": [SegmentTrajectoryType.SPIRAL_2D_CONST_ANGULAR_VEL],
+                    "trajectory_frequencies": [0.1], # frequency of circles
                     "vtem_status_topic": vtem_status_topic,
                     "wait_for_vtem": use_vtem,
                 }
