@@ -22,12 +22,10 @@ def generate_launch_description():
             executable='pressure_trajectory_node',
             parameters=[
                 {
-                    "amplitude_derivative_signs": [1],
                     "commanded_pressures_topic": commanded_pressures_topic,
                     "commanded_pressures_array_topic": "commanded_pressures_array",
                     "deflate_time": 5,
-                    # the amplitude will once extend to the pressure preak and then come back to zero pressure by the time the experiment ends
-                    "experiment_duration": 100,
+                    "experiment_duration": 60,
                     "inflate_time": 5,
                     "node_frequency": node_frequency,
                     "num_chambers": num_chambers,
@@ -35,8 +33,9 @@ def generate_launch_description():
                     "pressure_offsets": [150*100],
                     "pressure_peaks": [50*100],
                     "radius_CoP": 0.1,
-                    "segment_trajectories": [SegmentTrajectoryType.SPIRAL_2D_CONST_LINEAR_VEL],
-                    "trajectory_velocities": [100.], # Nm / s
+                    "segment_trajectories": [SegmentTrajectoryType.BENDING_1D_MOVING_AZIMUTH],
+                    "torque_azimuth_frequencies": [0.01],
+                    "trajectory_frequencies": [0.1],
                     "vtem_status_topic": vtem_status_topic,
                     "wait_for_vtem": use_vtem,
                 }

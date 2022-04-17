@@ -24,6 +24,7 @@ class SegmentTrajectoryType(IntEnum):
     """
     CONSTANT = 0
     BENDING_1D = 1
+    BENDING_1D_MOVING_AZIMUTH = 2
     CIRCLE = 10
     SPIRAL_2D_CONST_ANGULAR_VEL = 11 # spiral with constant angular velocity
     SPIRAL_2D_CONST_LINEAR_VEL = 12 # spiral with constant linear velocity in Cartesian torque space
@@ -130,6 +131,10 @@ class PressureTrajectoryNode(Node):
         for i in range(self.num_segments):
             if self.random_torque_azimuths[i]:
                 self.torque_azimuths[i] = np.random.uniform(-np.pi, np.pi)
+        self.declare_parameter('torque_azimuth_frequencies', [0. for i in range(self.num_segments)])
+        self.torque_azimuth_frequencies = self.get_parameter('torque_azimuth_frequencies').value # [rad]
+        assert len(self.torque_azimuth_frequencies) == self.num_segments
+        self.torque_azimuth_periods = [1/x for x in self.torque_azimuth_frequencies]
 
         self.declare_parameter('random_extension_forces', [False for i in range(self.num_segments)])
         self.random_extension_forces = self.get_parameter('random_extension_forces').value # [rad]
@@ -245,6 +250,9 @@ class PressureTrajectoryNode(Node):
                     commanded_tau_xyz = self.constant_trajectory(segment_idx, force_peak)
                 elif trajectory_type == SegmentTrajectoryType.BENDING_1D:
                     commanded_tau_xyz = self.bending_1d_trajectory(segment_idx, trajectory_time, self.trajectory_periods[segment_idx], force_peak)
+                elif trajectory_type == SegmentTrajectoryType.BENDING_1D_MOVING_AZIMUTH:
+                    commanded_tau_xyz = self.bending_1d_moving_azimuth_trajectory(trajectory_time, experiment_time, self.trajectory_periods[segment_idx], 
+                                                                                  force_peak, self.torque_azimuth_periods[segment_idx])
                 elif trajectory_type == SegmentTrajectoryType.CIRCLE:
                     commanded_tau_xyz = self.circle_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.SPIRAL_2D_CONST_ANGULAR_VEL:
@@ -331,6 +339,19 @@ class PressureTrajectoryNode(Node):
 
         f_x = np.cos(self.torque_azimuths[segment_idx])*f
         f_y = np.sin(self.torque_azimuths[segment_idx])*f
+
+        return np.array([f_x, f_y])
+
+    def bending_1d_moving_azimuth_trajectory(self, trajectory_time: float, experiment_time: float, 
+                                             trajectory_period: float, force_peak: float, torque_azimuth_period: float) -> np.array:
+        bending_period = trajectory_period
+        if trajectory_time < 0.5*bending_period:
+            f = force_peak * trajectory_time / (0.5*bending_period)
+        else:
+            f = force_peak * (2-trajectory_time / (0.5*bending_period))
+
+        f_x = np.cos(2*np.pi*experiment_time/torque_azimuth_period)*f
+        f_y = np.sin(2*np.pi*experiment_time/torque_azimuth_period)*f
 
         return np.array([f_x, f_y])
 
