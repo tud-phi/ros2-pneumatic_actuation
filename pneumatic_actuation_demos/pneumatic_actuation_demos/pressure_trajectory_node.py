@@ -24,7 +24,7 @@ class SegmentTrajectoryType(IntEnum):
     """
     CONSTANT = 0
     BENDING_1D = 1
-    BENDING_1D_MOVING_AZIMUTH = 2
+    STAR = 2
     CIRCLE = 10
     SPIRAL_2D_CONST_ANGULAR_VEL = 11 # spiral with constant angular velocity
     SPIRAL_2D_CONST_LINEAR_VEL = 12 # spiral with constant linear velocity in Cartesian torque space
@@ -250,9 +250,9 @@ class PressureTrajectoryNode(Node):
                     commanded_tau_xyz = self.constant_trajectory(segment_idx, force_peak)
                 elif trajectory_type == SegmentTrajectoryType.BENDING_1D:
                     commanded_tau_xyz = self.bending_1d_trajectory(segment_idx, trajectory_time, self.trajectory_periods[segment_idx], force_peak)
-                elif trajectory_type == SegmentTrajectoryType.BENDING_1D_MOVING_AZIMUTH:
-                    commanded_tau_xyz = self.bending_1d_moving_azimuth_trajectory(trajectory_time, experiment_time, self.trajectory_periods[segment_idx], 
-                                                                                  force_peak, self.torque_azimuth_periods[segment_idx])
+                elif trajectory_type == SegmentTrajectoryType.STAR:
+                    commanded_tau_xyz = self.star_trajectory(trajectory_time, experiment_time, self.trajectory_periods[segment_idx], 
+                                                             force_peak, self.torque_azimuth_periods[segment_idx])
                 elif trajectory_type == SegmentTrajectoryType.CIRCLE:
                     commanded_tau_xyz = self.circle_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.SPIRAL_2D_CONST_ANGULAR_VEL:
@@ -342,7 +342,7 @@ class PressureTrajectoryNode(Node):
 
         return np.array([f_x, f_y])
 
-    def bending_1d_moving_azimuth_trajectory(self, trajectory_time: float, experiment_time: float, 
+    def star_trajectory(self, trajectory_time: float, experiment_time: float, 
                                              trajectory_period: float, force_peak: float, torque_azimuth_period: float) -> np.array:
         bending_period = trajectory_period
         if trajectory_time < 0.5*bending_period:
