@@ -22,6 +22,7 @@ def generate_launch_description():
             executable='pressure_trajectory_node',
             parameters=[
                 {
+                    "amplitude_derivative_signs": [1],
                     "commanded_pressures_topic": commanded_pressures_topic,
                     "commanded_pressures_array_topic": "commanded_pressures_array",
                     "deflate_time": 5,
