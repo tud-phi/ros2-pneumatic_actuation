@@ -406,7 +406,7 @@ class PressureTrajectoryNode(Node):
 
         spiral_amplitude_time = (1 - amplitude_derivative_sign)*experiment_duration/2 + amplitude_derivative_sign*experiment_time
 
-        amplitude = force_peak*np.sqrt(spiral_amplitude_time/experiment_duration)/2
+        amplitude = force_peak*np.sqrt(spiral_amplitude_time/experiment_duration)
         phase = 2*trajectory_velocity/force_peak*np.sqrt(spiral_amplitude_time*experiment_duration)
 
         f_x = amplitude * np.cos(phase)
