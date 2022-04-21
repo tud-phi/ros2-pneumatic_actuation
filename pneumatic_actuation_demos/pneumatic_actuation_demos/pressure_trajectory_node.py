@@ -351,15 +351,16 @@ class PressureTrajectoryNode(Node):
         # else:
         #     min_bending_ratio = 0.2
         # if trajectory_time < 0.5*bending_period:
-        #     f = force_peak * (min_bending_ratio + (1-min_bending_ratio)*trajectory_time / (0.5*bending_period))
+        #     f_ratio = min_bending_ratio + (1-min_bending_ratio)*trajectory_time / (0.5*bending_period))
         # else:
-        #     f = force_peak * (min_bending_ratio + (1-min_bending_ratio)*(2-trajectory_time / (0.5*bending_period)))
+        #     f_ratio = min_bending_ratio + (1-min_bending_ratio)*(2-trajectory_time / (0.5*bending_period))
 
         if trajectory_time < 0.5*bending_period:
-            f = force_peak * trajectory_time / (0.5*bending_period)
+            f_ratio = trajectory_time / (0.5*bending_period)
         else:
-            f = force_peak * (2-trajectory_time / (0.5*bending_period))
+            f_ratio = 2-trajectory_time / (0.5*bending_period)
 
+        f = f_ratio * force_peak
         f_x = np.cos(2*np.pi*experiment_time/torque_azimuth_period)*f
         f_y = np.sin(2*np.pi*experiment_time/torque_azimuth_period)*f
 
