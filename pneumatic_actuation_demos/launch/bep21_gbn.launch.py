@@ -43,7 +43,7 @@ def generate_launch_description():
                     "seed": 0,
                     "segment_trajectories": [SegmentTrajectoryType.GBN_RAND],
                     "torque_azimuths": [0.],
-                    "trajectory_frequencies": [2],
+                    "trajectory_frequencies": [1.],
                     "vtem_status_topic": vtem_status_topic,
                     "wait_for_vtem": use_vtem,
                 }
