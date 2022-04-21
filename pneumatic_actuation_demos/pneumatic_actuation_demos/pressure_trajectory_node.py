@@ -343,8 +343,18 @@ class PressureTrajectoryNode(Node):
         return np.array([f_x, f_y])
 
     def star_trajectory(self, trajectory_time: float, experiment_time: float, 
-                                             trajectory_period: float, force_peak: float, torque_azimuth_period: float) -> np.array:
+                        trajectory_period: float, force_peak: float, torque_azimuth_period: float) -> np.array:
         bending_period = trajectory_period
+        
+        # if experiment_time <= 2*bending_period:
+        #     min_bending_ratio = 0.
+        # else:
+        #     min_bending_ratio = 0.2
+        # if trajectory_time < 0.5*bending_period:
+        #     f = force_peak * (min_bending_ratio + (1-min_bending_ratio)*trajectory_time / (0.5*bending_period))
+        # else:
+        #     f = force_peak * (min_bending_ratio + (1-min_bending_ratio)*(2-trajectory_time / (0.5*bending_period)))
+
         if trajectory_time < 0.5*bending_period:
             f = force_peak * trajectory_time / (0.5*bending_period)
         else:
