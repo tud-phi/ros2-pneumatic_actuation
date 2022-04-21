@@ -30,8 +30,8 @@ def generate_launch_description():
                     "node_frequency": node_frequency,
                     "num_chambers": num_chambers,
                     "num_segments": num_segments,
-                    "pressure_offsets": [425*100],
-                    "pressure_peaks": [425*100],
+                    "pressure_offsets": [225*100],
+                    "pressure_peaks": [200*100],
                     "radius_CoP": 0.1,
                     "segment_trajectories": [SegmentTrajectoryType.BENDING_1D],
                     "trajectory_frequencies": [0.2],
@@ -50,7 +50,7 @@ def generate_launch_description():
                 executable='input_pressures_sub_node',
                 parameters=[
                     common_vtem_params,
-                    {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 200*100.0}
+                    {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 450*100.0}
                 ]
             ),
             Node(
