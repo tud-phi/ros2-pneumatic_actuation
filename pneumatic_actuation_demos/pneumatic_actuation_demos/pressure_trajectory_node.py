@@ -131,7 +131,7 @@ class PressureTrajectoryNode(Node):
         for i in range(self.num_segments):
             if self.random_torque_azimuths[i]:
                 self.torque_azimuths[i] = np.random.uniform(-np.pi, np.pi)
-        self.declare_parameter('torque_azimuth_frequencies', [0. for i in range(self.num_segments)])
+        self.declare_parameter('torque_azimuth_frequencies', [0.1 for i in range(self.num_segments)])
         self.torque_azimuth_frequencies = self.get_parameter('torque_azimuth_frequencies').value # [rad]
         assert len(self.torque_azimuth_frequencies) == self.num_segments
         self.torque_azimuth_periods = [1/x for x in self.torque_azimuth_frequencies]
