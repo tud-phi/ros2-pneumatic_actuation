@@ -34,7 +34,7 @@ def generate_launch_description():
                     "pressure_peaks": [225*100],
                     "radius_CoP": 0.1,
                     "segment_trajectories": [SegmentTrajectoryType.STAR],
-                    "torque_azimuth_frequencies": [0.0025], # period of 400s
+                    "torque_azimuth_frequencies": [0.005], # period of 200s
                     "trajectory_frequencies": [0.2],
                     "vtem_status_topic": vtem_status_topic,
                     "wait_for_vtem": use_vtem,
