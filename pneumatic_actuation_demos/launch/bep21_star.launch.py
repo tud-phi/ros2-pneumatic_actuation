@@ -33,7 +33,7 @@ def generate_launch_description():
                     "pressure_offsets": [225*100],
                     "pressure_peaks": [225*100],
                     "radius_CoP": 0.1,
-                    "segment_trajectories": [SegmentTrajectoryType.BENDING_1D_MOVING_AZIMUTH],
+                    "segment_trajectories": [SegmentTrajectoryType.STAR],
                     "torque_azimuth_frequencies": [0.0025], # period of 400s
                     "trajectory_frequencies": [0.2],
                     "vtem_status_topic": vtem_status_topic,
