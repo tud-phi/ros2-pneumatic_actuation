@@ -25,6 +25,7 @@ class SegmentTrajectoryType(IntEnum):
     CONSTANT = 0
     BENDING_1D = 1
     FLOWER = 2
+    RAND_SETPOINTS = 4
     CIRCLE = 10
     SPIRAL_2D_CONST_ANGULAR_VEL = 11 # spiral with constant angular velocity
     SPIRAL_2D_CONST_LINEAR_VEL = 12 # spiral with constant linear velocity in Cartesian torque space
@@ -100,6 +101,11 @@ class PressureTrajectoryNode(Node):
         self.segment_trajectories = self.get_parameter('segment_trajectories').value
         assert len(self.segment_trajectories) == self.num_segments
 
+        self.torque_history = []
+        for i in range(self.num_segments):
+            self.torque_history.append(None)
+
+
         self.declare_parameter('trajectory_frequencies', [0.1 for i in range(self.num_segments)])
         self.trajectory_frequencies = self.get_parameter('trajectory_frequencies').value
         assert len(self.trajectory_frequencies) == self.num_segments
@@ -172,6 +178,11 @@ class PressureTrajectoryNode(Node):
         self.declare_parameter('seed', 101)
         self.seed = self.get_parameter('seed').value
         np.random.seed(self.seed)
+
+        # random torque setpoints
+        self.torque_setpoints = []
+        for i in range(self.num_segments):
+            self.torque_setpoints.append(None)
 
         # system identification signals parameters
         self.chirp_freq0 = 0. # [Hz] starting frequency of chirp
@@ -252,7 +263,11 @@ class PressureTrajectoryNode(Node):
                     commanded_tau_xyz = self.bending_1d_trajectory(segment_idx, trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.FLOWER:
                     commanded_tau_xyz = self.flower_trajectory(trajectory_time, experiment_time, self.trajectory_periods[segment_idx], 
-                                                             force_peak, self.torque_azimuth_periods[segment_idx])
+                                                               force_peak, self.torque_azimuth_periods[segment_idx])
+                elif trajectory_type == SegmentTrajectoryType.RAND_SETPOINTS:
+                    commanded_tau_xyz = self.rand_setpoints_trajectory(segment_idx, self.trajectory_velocities[segment_idx], force_peak,
+                                                                       self.random_torque_amplitudes[segment_idx], self.random_torque_azimuths[segment_idx], 
+                                                                       self.random_extension_forces[segment_idx])        
                 elif trajectory_type == SegmentTrajectoryType.CIRCLE:
                     commanded_tau_xyz = self.circle_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.SPIRAL_2D_CONST_ANGULAR_VEL:
@@ -306,6 +321,14 @@ class PressureTrajectoryNode(Node):
             else:
                 self.state_counter += 1
 
+        for segment_idx in range(self.num_segments):
+            if self.torque_history[segment_idx] is None:
+                self.torque_history[segment_idx] = np.expand_dims(self.commanded_tau_xyz[segment_idx], 0)
+            else:
+                self.torque_history[segment_idx] = np.concatenate((self.torque_history[segment_idx], 
+                                                                   np.expand_dims(self.commanded_tau_xyz[segment_idx], 0)), axis=0)
+
+
         self.get_logger().info(f'Commanding pressure at t={(self.counter*self.timer_period):.2f} with state {self.state.name}: {self.commanded_pressures.flatten()}')
 
         msg_multi_array = Float64MultiArray()
@@ -354,6 +377,52 @@ class PressureTrajectoryNode(Node):
         f_y = np.sin(2*np.pi*experiment_time/torque_azimuth_period)*f
 
         return np.array([f_x, f_y])
+
+    def rand_setpoints_trajectory(self, segment_idx: int, trajectory_velocity: float, 
+                                  force_peak: float, random_torque_amplitude: bool = False, 
+                                  random_torque_azimuth: bool = False, random_extension_force: bool = False) -> np.array:
+
+        sample_setpoint = False
+        if self.torque_setpoints[segment_idx] is None:
+            # initialize the first setpoint and start moving at the next time step
+            sample_setpoint = True
+            torque = np.array([0., 0., self.extension_forces[segment_idx]])
+        else:
+            prior_torque = self.torque_history[segment_idx][-1, :]
+            torque_setpoint = self.torque_setpoints[segment_idx]
+
+            # direction in torque-space of how torque needs to be changed to move toward setpoint
+            unit_torque_dir = (torque_setpoint - prior_torque) / np.linalg.norm(torque_setpoint - prior_torque)
+
+            # torque change we apply
+            delta_torque = trajectory_velocity * self.timer_period * unit_torque_dir
+            
+            if np.linalg.norm(delta_torque) >= np.linalg.norm(torque_setpoint - prior_torque):
+                delta_torque = (torque_setpoint - prior_torque)
+                sample_setpoint = True
+
+            torque = prior_torque + delta_torque
+                
+
+        if sample_setpoint:
+            if random_torque_amplitude:
+                self.torque_amplitudes[segment_idx] = np.random.uniform(0, force_peak)
+
+            if random_torque_azimuth:
+                self.torque_azimuths[segment_idx] = np.random.uniform(low=0, high=2*np.pi)
+
+            if random_extension_force:
+                self.extension_forces[segment_idx] = np.random.uniform(low=(self.pressure_offsets[segment_idx]-self.pressure_peaks[segment_idx])*self.num_chambers, 
+                                                                       high=self.pressure_offsets[segment_idx] * self.num_chambers)
+
+            tau_x = np.cos(self.torque_azimuths[segment_idx]) * self.torque_amplitudes[segment_idx]
+            tau_y = np.sin(self.torque_azimuths[segment_idx]) * self.torque_amplitudes[segment_idx]
+            f_z = self.extension_forces[segment_idx]
+
+            self.torque_setpoints[segment_idx] = np.array([tau_x, tau_y, f_z])
+
+
+        return torque
 
     def half_8_shape_trajectory(self, trajectory_time: float, trajectory_period: float, 
                                 force_peak: float) -> np.array:
