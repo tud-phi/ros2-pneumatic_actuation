@@ -406,7 +406,8 @@ class PressureTrajectoryNode(Node):
 
         if sample_setpoint:
             if random_torque_amplitude:
-                self.torque_amplitudes[segment_idx] = np.random.uniform(0, force_peak)
+                # more samples at higher radii
+                self.torque_amplitudes[segment_idx] = np.random.triangular(0., force_peak, force_peak)
 
             if random_torque_azimuth:
                 self.torque_azimuths[segment_idx] = np.random.uniform(low=0, high=2*np.pi)

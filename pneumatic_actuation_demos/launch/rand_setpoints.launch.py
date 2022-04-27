@@ -38,7 +38,7 @@ def generate_launch_description():
                     "random_extension_forces": [False],
                     "seed": 0,
                     "segment_trajectories": [SegmentTrajectoryType.RAND_SETPOINTS],
-                    "trajectory_velocities": [100.], # Nm / s
+                    "trajectory_velocities": [200.], # Nm / s
                     "vtem_status_topic": vtem_status_topic,
                     "wait_for_vtem": use_vtem,
                 }
