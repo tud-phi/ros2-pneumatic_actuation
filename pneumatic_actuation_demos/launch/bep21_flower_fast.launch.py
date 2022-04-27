@@ -10,7 +10,7 @@ def generate_launch_description():
     commanded_pressures_topic = "/pneumatic_actuation/commanded_pressures"
     measured_pressures_topic = "/pneumatic_actuation/measured_pressures"
 
-    use_vtem = True
+    use_vtem = False
     node_frequency = 100.
     vtem_status_topic = "/vtem_control/vtem_status"
     common_vtem_params = {"num_valves": num_segments*num_chambers, "modbus_node": "192.168.4.3", "modbus_service": "502"}
@@ -34,7 +34,7 @@ def generate_launch_description():
                     "pressure_peaks": [225*100],
                     "radius_CoP": 0.1,
                     "segment_trajectories": [SegmentTrajectoryType.FLOWER],
-                    "torque_azimuth_frequencies": [0.005], # period of 200s
+                    "torque_azimuth_frequencies": [0.01], # period of 100s
                     "trajectory_frequencies": [0.2],
                     "vtem_status_topic": vtem_status_topic,
                     "wait_for_vtem": use_vtem,
