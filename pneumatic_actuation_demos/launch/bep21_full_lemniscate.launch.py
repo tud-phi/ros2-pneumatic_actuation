@@ -33,7 +33,7 @@ def generate_launch_description():
                     "pressure_offsets": [225*100],
                     "pressure_peaks": [200*100],
                     "radius_CoP": 0.1,
-                    "segment_trajectories": [SegmentTrajectoryType.HALF_8_SHAPE],
+                    "segment_trajectories": [SegmentTrajectoryType.FULL_LEMNISCATE],
                     "trajectory_frequencies": [0.1],
                     "vtem_status_topic": vtem_status_topic,
                     "wait_for_vtem": use_vtem,
