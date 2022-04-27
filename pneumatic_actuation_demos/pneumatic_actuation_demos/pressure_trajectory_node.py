@@ -29,8 +29,8 @@ class SegmentTrajectoryType(IntEnum):
     CIRCLE = 10
     SPIRAL_2D_CONST_ANGULAR_VEL = 11 # spiral with constant angular velocity
     SPIRAL_2D_CONST_LINEAR_VEL = 12 # spiral with constant linear velocity in Cartesian torque space
-    HALF_8_SHAPE = 20
-    FULL_8_SHAPE = 21
+    HALF_LEMNISCATE = 20
+    FULL_LEMNISCATE = 21
     # System identification signals
     # Chirp: https://en.wikipedia.org/wiki/Sine_wave
     CHIRP = 30
@@ -276,10 +276,10 @@ class PressureTrajectoryNode(Node):
                 elif trajectory_type == SegmentTrajectoryType.SPIRAL_2D_CONST_LINEAR_VEL:
                     commanded_tau_xyz = self.spiral_2d_const_linear_vel_trajectory(experiment_time, self.trajectory_velocities[segment_idx], 
                                                                                    self.experiment_duration, force_peak, self.amplitude_derivative_signs[segment_idx])
-                elif trajectory_type == SegmentTrajectoryType.HALF_8_SHAPE:
-                    commanded_tau_xyz = self.half_8_shape_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
-                elif trajectory_type == SegmentTrajectoryType.FULL_8_SHAPE:
-                    commanded_tau_xyz = self.full_8_shape_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
+                elif trajectory_type == SegmentTrajectoryType.HALF_LEMNISCATE:
+                    commanded_tau_xyz = self.half_lemniscate_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
+                elif trajectory_type == SegmentTrajectoryType.FULL_LEMNISCATE:
+                    commanded_tau_xyz = self.full_lemniscate_trajectory(trajectory_time, self.trajectory_periods[segment_idx], force_peak)
                 elif trajectory_type == SegmentTrajectoryType.CHIRP:
                     commanded_tau_xyz = self.chirp_trajectory(segment_idx, trajectory_time, force_peak)
                 elif trajectory_type == SegmentTrajectoryType.GBN:
@@ -425,8 +425,8 @@ class PressureTrajectoryNode(Node):
 
         return torque
 
-    def half_8_shape_trajectory(self, trajectory_time: float, trajectory_period: float, 
-                                force_peak: float) -> np.array:
+    def half_lemniscate_trajectory(self, trajectory_time: float, trajectory_period: float, 
+                                   force_peak: float) -> np.array:
         # for description of trajectory: https://www.overleaf.com/read/dxvsqnksnqgt
         F_x, F_y = 1, 0.5
 
@@ -435,8 +435,8 @@ class PressureTrajectoryNode(Node):
 
         return np.array([f_x, f_y])
 
-    def full_8_shape_trajectory(self, trajectory_time: float, trajectory_period: float, 
-                                force_peak: float) -> np.array:
+    def full_lemniscate_trajectory(self, trajectory_time: float, trajectory_period: float, 
+                                   force_peak: float) -> np.array:
         # for description of trajectory: https://www.overleaf.com/read/dxvsqnksnqgt
         F_x, F_y = 2, 1
 
