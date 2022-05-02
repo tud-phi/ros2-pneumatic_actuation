@@ -1,5 +1,6 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
+import numpy as np
 
 from pneumatic_actuation_demos.pressure_trajectory_node import SegmentTrajectoryType
 
@@ -34,6 +35,7 @@ def generate_launch_description():
                     "pressure_peaks": [200*100],
                     "radius_CoP": 0.1,
                     "segment_trajectories": [SegmentTrajectoryType.BENDING_1D],
+                    "torque_azimuths": [0./180*np.pi],
                     "trajectory_frequencies": [0.2],
                     "vtem_status_topic": vtem_status_topic,
                     "wait_for_vtem": use_vtem,
