@@ -25,7 +25,7 @@ def generate_launch_description():
                     "commanded_pressures_topic": commanded_pressures_topic,
                     "commanded_pressures_array_topic": "commanded_pressures_array",
                     "deflate_time": 5,
-                    "experiment_duration": 600,
+                    "experiment_duration": 1500,
                     "inflate_time": 5,
                     "node_frequency": node_frequency,
                     "num_chambers": num_chambers,
@@ -38,7 +38,7 @@ def generate_launch_description():
                     "random_extension_forces": [False],
                     "seed": 0,
                     "segment_trajectories": [SegmentTrajectoryType.RAND_SETPOINTS],
-                    "trajectory_velocities": [1500.], # Nm / s
+                    "trajectory_velocities": [2000.], # Nm / s
                     "vtem_status_topic": vtem_status_topic,
                     "wait_for_vtem": use_vtem,
                 }
