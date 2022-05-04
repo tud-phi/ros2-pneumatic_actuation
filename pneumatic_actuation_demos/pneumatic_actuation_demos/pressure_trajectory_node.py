@@ -418,7 +418,11 @@ class PressureTrajectoryNode(Node):
         if sample_setpoint:
             if random_torque_amplitude:
                 # more samples at higher radii
+                # triangular distribution with peak at force_peak
                 self.torque_amplitudes[segment_idx] = np.random.triangular(0., force_peak, force_peak)
+
+                # half-normal distribution with center around force peak and scale of 1/4 force_peak
+                # self.torque_amplitudes[segment_idx] = force_peak - np.abs(np.random.normal(0., 1/4*force_peak))
 
             if random_torque_azimuth:
                 self.torque_azimuths[segment_idx] = np.random.uniform(low=0, high=2*np.pi)
