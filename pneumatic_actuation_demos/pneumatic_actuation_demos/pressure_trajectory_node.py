@@ -73,11 +73,17 @@ class PressureTrajectoryNode(Node):
         self.sub_vtem_status = self.create_subscription(Bool, vtem_status_topic, self.vtem_status_callback, 10)
         self.vtem_status = False
 
-        self.declare_parameter('radius_CoP', 0.1) # radius from center-line of segment to the center of pressure of each chamber
+        # radius from center-line of segment to the center of pressure of each chamber
+        # for MIT pneumatic soft segment it is 14.23 mm
+        self.declare_parameter('radius_CoP', 0.01423)
         self.r_p = self.get_parameter('radius_CoP').value
 
         # modelled area of chamber in [m^2] for transforming tau_xyz to pressures
-        self.chamber_area = 1.
+        # for MIT pneumatic soft segment it is 877.98 mm^2 = 0.00087798 m^2
+        self.declare_parameter('chamber_area', 0.00087798)
+        self.chamber_area = self.get_parameter('chamber_area').value
+
+
         if self.num_chambers == 4:
             self.A_p = 1 / self.chamber_area * np.array([[0, -1/(2*self.r_p), 1/4], 
                                                          [0, 1/(2*self.r_p), 1/4], 

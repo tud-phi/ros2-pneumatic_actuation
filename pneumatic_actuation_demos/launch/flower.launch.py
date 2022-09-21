@@ -32,7 +32,6 @@ def generate_launch_description():
                     "num_segments": num_segments,
                     "pressure_offsets": [150*100],
                     "pressure_peaks": [50*100],
-                    "radius_CoP": 0.1,
                     "segment_trajectories": [SegmentTrajectoryType.FLOWER],
                     "torque_azimuth_frequencies": [0.01],
                     "trajectory_frequencies": [0.1],
