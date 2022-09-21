@@ -32,13 +32,12 @@ def generate_launch_description():
                     "num_segments": num_segments,
                     "pressure_offsets": [225*100],
                     "pressure_peaks": [225*100],
-                    "radius_CoP": 0.1,
                     "random_torque_amplitudes": [True],
                     "random_torque_azimuths": [True],
                     "random_extension_forces": [False],
                     "seed": 0,
                     "segment_trajectories": [SegmentTrajectoryType.RAND_SETPOINTS],
-                    "trajectory_velocities": [2000.], # Nm / s
+                    "trajectory_velocities": [0.25], # Nm / s
                     "vtem_status_topic": vtem_status_topic,
                     "wait_for_vtem": use_vtem,
                 }

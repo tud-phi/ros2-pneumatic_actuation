@@ -34,9 +34,8 @@ def generate_launch_description():
                     "num_segments": num_segments,
                     "pressure_offsets": [225*100],
                     "pressure_peaks": [225*100],
-                    "radius_CoP": 0.1,
                     "segment_trajectories": [SegmentTrajectoryType.SPIRAL_2D_CONST_LINEAR_VEL],
-                    "trajectory_velocities": [1000.], # Nm / s
+                    "trajectory_velocities": [0.125], # Nm / s
                     "vtem_status_topic": vtem_status_topic,
                     "wait_for_vtem": use_vtem,
                 }

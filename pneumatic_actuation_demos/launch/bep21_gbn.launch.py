@@ -36,7 +36,6 @@ def generate_launch_description():
                     "num_segments": num_segments,
                     "pressure_offsets": [225*100],
                     "pressure_peaks": [250*100],
-                    "radius_CoP": 0.1,
                     "random_torque_amplitudes": [True],
                     "random_torque_azimuths": [True],
                     "random_extension_forces": [False],
