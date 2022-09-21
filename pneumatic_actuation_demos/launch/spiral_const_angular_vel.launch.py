@@ -34,7 +34,6 @@ def generate_launch_description():
                     "num_segments": num_segments,
                     "pressure_offsets": [150*100],
                     "pressure_peaks": [50*100],
-                    "radius_CoP": 0.1,
                     "segment_trajectories": [SegmentTrajectoryType.SPIRAL_2D_CONST_ANGULAR_VEL],
                     "trajectory_frequencies": [0.1], # frequency of circles
                     "vtem_status_topic": vtem_status_topic,

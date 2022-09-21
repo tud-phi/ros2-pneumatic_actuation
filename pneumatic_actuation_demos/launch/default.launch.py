@@ -22,6 +22,7 @@ def generate_launch_description():
             executable='pressure_trajectory_node',
             parameters=[
                 {
+                    "chamber_area": 0.00087798,  # 877.98 mm^2
                     "commanded_pressures_topic": commanded_pressures_topic,
                     "commanded_pressures_array_topic": "commanded_pressures_array",
                     "deflate_time": 5,
@@ -32,7 +33,7 @@ def generate_launch_description():
                     "num_segments": num_segments,
                     "pressure_offsets": [125*100],
                     "pressure_peaks": [50*100],
-                    "radius_CoP": 0.1,
+                    "radius_CoP": 0.01423,  # 14.23 mm
                     "segment_trajectories": [SegmentTrajectoryType.BENDING_1D],
                     "torque_azimuths": [0.],
                     "trajectory_frequencies": [0.1],
