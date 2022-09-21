@@ -31,12 +31,12 @@ def generate_launch_description():
                     "node_frequency": node_frequency,
                     "num_chambers": num_chambers,
                     "num_segments": num_segments,
-                    "pressure_offsets": [0*100, 200*100],
-                    "pressure_peaks": [0*100, 130*100],
+                    "pressure_offsets": [150*100, 150*100],
+                    "pressure_peaks": [150*100, 150*100],
                     "radius_CoP": 0.1,
                     "segment_trajectories": [SegmentTrajectoryType.FULL_LEMNISCATE, SegmentTrajectoryType.FULL_LEMNISCATE],
                     "torque_azimuths": [0., 0.],
-                    "trajectory_frequencies": [0.1, 0.1],
+                    "trajectory_frequencies": [0.1, 0.2],
                     "vtem_status_topic": vtem_status_topic,
                     "wait_for_vtem": use_vtem,
                 }
@@ -52,7 +52,7 @@ def generate_launch_description():
                 executable='input_pressures_sub_node',
                 parameters=[
                     common_vtem_params,
-                    {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 330*100.0}
+                    {"input_pressures_topic": commanded_pressures_topic, "max_pressure": 300*100.0}
                 ]
             ),
             Node(
